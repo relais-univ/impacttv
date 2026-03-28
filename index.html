@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <meta name="author" content="KONSÉGUÉ RÉLWENDÉ CHRISTIAN">
+    <meta name="copyright" content="© KONSÉGUÉ RÉLWENDÉ CHRISTIAN - Tous droits réservés">
+    <title>Impact TV – La Télévision du Royaume des Cieux</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* ============================================
+           IMPACT TV - Plateforme digitale
+           Créé par : KONSÉGUÉ RÉLWENDÉ CHRISTIAN
+           Contact : 06 75 52 16
+           © Tous droits réservés
+           ============================================ */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #0a0a0f; color: #fff; }
+        .header { background: linear-gradient(135deg, #0a0a0f, #1a1a2e); padding: 20px; text-align: center; border-bottom: 3px solid #ffd700; }
+        .header h1 { font-size: 2rem; font-weight: 800; color: #3b82f6; }
+        .header h1 span { color: #ff8c00; }
+        .slogan { font-size: 0.8rem; color: #ff8c00; margin-top: 5px; }
+        
+        .player-container { max-width: 1000px; margin: 15px auto; padding: 0 15px; }
+        .video-box { position: relative; background: #000; border-radius: 16px; overflow: hidden; aspect-ratio: 16/9; }
+        video { width: 100%; height: 100%; outline: none; background: #000; }
+        .live-badge { position: absolute; top: 10px; left: 10px; background: #e74c3c; padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; display: flex; align-items: center; gap: 5px; z-index: 15; }
+        .live-badge i { animation: pulse 1s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+        
+        .action-bar { display: flex; justify-content: space-around; background: #1a1a2e; border-radius: 60px; padding: 12px; margin-top: 15px; flex-wrap: wrap; gap: 8px; border: 1px solid rgba(255,215,0,0.3); }
+        .action-btn { background: none; border: none; color: white; display: flex; flex-direction: column; align-items: center; padding: 10px 20px; border-radius: 50px; cursor: pointer; font-size: 0.8rem; transition: 0.2s; font-weight: 500; }
+        .action-btn i { font-size: 1.5rem; margin-bottom: 5px; }
+        .action-btn:hover { background: rgba(255,255,255,0.15); transform: scale(1.02); }
+        .btn-watch { color: #ffd700; }
+        .btn-like { color: white; }
+        .btn-like.liked { color: #ff4d4d; }
+        .btn-comment { color: #f39c12; }
+        .btn-share { color: #3498db; }
+        .btn-download { color: #2ecc71; }
+        
+        .search-container { max-width: 700px; margin: 30px auto; padding: 0 20px; }
+        .search-box { position: relative; width: 100%; }
+        .search-box i { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); color: #ffd700; font-size: 1.2rem; }
+        .search-box input { width: 100%; padding: 16px 20px 16px 55px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,215,0,0.3); border-radius: 60px; color: white; font-size: 1rem; transition: all 0.3s; }
+        .search-box input:focus { outline: none; border-color: #ffd700; background: rgba(255,255,255,0.12); }
+        
+        .results-area { max-width: 1000px; margin: 20px auto; padding: 0 20px; }
+        .verse-card { background: rgba(255,215,0,0.1); border-left: 4px solid #ffd700; padding: 20px; border-radius: 16px; margin-bottom: 25px; }
+        .verse-ref { font-size: 1rem; font-weight: 700; color: #ffd700; margin-bottom: 10px; }
+        .verse-text { font-size: 1.1rem; line-height: 1.5; color: #fff; }
+        .no-results { text-align: center; padding: 40px; color: #888; }
+        
+        .comments-area { max-width: 1000px; margin: 20px auto; padding: 0 15px; }
+        .comments-box { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 15px; }
+        .comments-box h3 { color: #ffd700; margin-bottom: 15px; }
+        .comment-row { display: flex; gap: 10px; margin-bottom: 15px; }
+        .comment-row input { flex: 1; padding: 10px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,215,0,0.3); border-radius: 30px; color: white; }
+        .comment-row button { padding: 10px 20px; background: #ffd700; border: none; border-radius: 30px; color: #1a1a2e; font-weight: bold; cursor: pointer; }
+        .comment-list { max-height: 300px; overflow-y: auto; }
+        .comment-item { background: rgba(255,255,255,0.03); padding: 10px; border-radius: 12px; margin-bottom: 8px; }
+        .comment-name { color: #ffd700; font-size: 0.7rem; display: flex; align-items: center; justify-content: space-between; }
+        .comment-name button { background: none; border: none; color: #888; cursor: pointer; font-size: 0.7rem; transition: 0.2s; }
+        .comment-name button:hover { color: #e74c3c; }
+        .comment-text { font-size: 0.8rem; margin-top: 4px; word-break: break-word; }
+        .comment-date { font-size: 0.6rem; color: #666; margin-top: 4px; }
+        .empty-comments { text-align: center; padding: 20px; color: #888; }
+        
+        .replay-grid { max-width: 1000px; margin: 20px auto; padding: 0 15px; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; }
+        .replay-card { background: rgba(255,255,255,0.05); border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,215,0,0.2); transition: 0.2s; cursor: pointer; }
+        .replay-card:hover { transform: translateY(-3px); border-color: #ffd700; }
+        .replay-img { position: relative; aspect-ratio: 16/9; overflow: hidden; }
+        .replay-img img { width: 100%; height: 100%; object-fit: cover; }
+        .replay-info { padding: 12px; }
+        .replay-title { font-weight: 600; font-size: 0.9rem; }
+        .replay-date { font-size: 0.65rem; color: #ffd700; margin: 5px 0; }
+        .replay-stats { display: flex; gap: 12px; font-size: 0.7rem; color: #888; margin-bottom: 8px; }
+        .replay-stats span { cursor: pointer; display: flex; align-items: center; gap: 4px; }
+        .replay-buttons { display: flex; gap: 8px; }
+        .replay-buttons button { flex: 1; padding: 5px; border-radius: 6px; font-size: 0.65rem; display: flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; border: none; background: none; }
+        .replay-download { background: rgba(46,204,113,0.2); color: #2ecc71; border: 1px solid #2ecc71; }
+        .replay-share { background: rgba(52,152,219,0.2); color: #3498db; border: 1px solid #3498db; }
+        
+        .info-footer { background: linear-gradient(135deg, #0f0f1a, #0a0a0f); margin-top: 30px; padding: 20px; text-align: center; display: flex; justify-content: center; gap: 30px; flex-wrap: wrap; }
+        .info-item i { color: #ffd700; font-size: 1.2rem; }
+        .info-item p { font-size: 0.7rem; margin-top: 5px; }
+        .info-item strong { font-size: 1rem; color: white; }
+        
+        .whatsapp-footer { text-align: center; padding: 20px; }
+        .whatsapp-footer button { background: #25D366; border: none; padding: 12px 25px; border-radius: 50px; color: white; font-weight: bold; font-size: 1rem; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; }
+        
+        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(100px); background: #2ecc71; padding: 8px 16px; border-radius: 30px; font-size: 0.8rem; transition: 0.3s; z-index: 1000; }
+        .toast.show { transform: translateX(-50%) translateY(0); }
+        .toast.error { background: #e74c3c; }
+        
+        @media (max-width: 600px) { .action-btn span { display: none; } .action-btn { padding: 8px 12px; } .replay-grid { grid-template-columns: 1fr; } .verse-text { font-size: 0.9rem; } }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>IMPACT <span>TV</span></h1>
+    <div class="slogan">« La Télévision du Royaume des Cieux »</div>
+</div>
+
+<div class="player-container">
+    <div class="video-box">
+        <div class="live-badge"><i class="fas fa-circle"></i> EN DIRECT</div>
+        <video id="mainVideo" controls poster="https://via.placeholder.com/1280x720/1a1a2e/ffd700?text=Impact+TV">
+            <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4">
+        </video>
+    </div>
+    <div class="action-bar">
+        <button class="action-btn btn-watch" id="watchBtn"><i class="fas fa-play"></i><span>Regarder</span></button>
+        <button class="action-btn btn-like" id="likeBtn"><i class="far fa-heart"></i><span id="likeCount">0</span></button>
+        <button class="action-btn btn-comment" id="commentScrollBtn"><i class="far fa-comment"></i><span id="commentCount">0</span></button>
+        <button class="action-btn btn-share" id="shareBtn"><i class="fas fa-share-alt"></i><span>Partager</span></button>
+        <button class="action-btn btn-download" id="downloadBtn"><i class="fas fa-download"></i><span>Télécharger</span></button>
+    </div>
+</div>
+
+<div class="search-container">
+    <div class="search-box">
+        <i class="fas fa-search"></i>
+        <input type="text" id="searchInput" placeholder="Rechercher un verset biblique ou une émission...">
+    </div>
+</div>
+
+<div id="resultsArea" class="results-area"></div>
+
+<div class="comments-area" id="commentsSection">
+    <div class="comments-box">
+        <h3><i class="fas fa-comments"></i> Commentaires</h3>
+        <div class="comment-row">
+            <input type="text" id="commentInput" placeholder="Écrivez votre commentaire...">
+            <button id="postCommentBtn">Envoyer</button>
+        </div>
+        <div class="comment-list" id="commentList"><div class="empty-comments">Soyez le premier à commenter !</div></div>
+    </div>
+</div>
+
+<div class="info-footer">
+    <div class="info-item"><i class="fas fa-satellite-dish"></i><p>Canal+ <strong id="canalText">n°424</strong></p></div>
+    <div class="info-item"><i class="fas fa-tv"></i><p>TNT <strong id="tntText">n°4</strong></p></div>
+    <div class="info-item"><i class="fas fa-globe"></i><p>www.impacttv.bf</p></div>
+</div>
+
+<div class="whatsapp-footer"><button id="whatsappButton"><i class="fab fa-whatsapp"></i> WhatsApp : 25 36 72 72</button></div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+    // ============================================
+    // IMPACT TV - Plateforme digitale
+    // Créé par : KONSÉGUÉ RÉLWENDÉ CHRISTIAN
+    // Contact : 06 75 52 16
+    // © Tous droits réservés - Reproduction interdite
+    // ============================================
+    
+    const STORAGE_EMISSIONS = 'impact_tv_emissions';
+    const STORAGE_LIVE_URL = 'impact_tv_live_url';
+    const STORAGE_WHATSAPP = 'impact_tv_whatsapp';
+    const STORAGE_CANAL = 'impact_tv_canal';
+    const STORAGE_TNT = 'impact_tv_tnt';
+    const STORAGE_LIKES = 'impact_tv_likes';
+    const STORAGE_COMMENTS = 'impact_tv_comments';
+    
+    let emissions = [];
+    let currentVideoUrl = "https://www.w3schools.com/html/mov_bbb.mp4";
+    let currentVideoId = 'live';
+    let currentVideoTitle = 'Impact TV - Direct';
+    let likes = { live: 0 };
+    let comments = { live: [] };
+    
+    // ID utilisateur unique pour la suppression des commentaires
+    let currentUserId = localStorage.getItem('impact_tv_user_id');
+    if (!currentUserId) {
+        currentUserId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+        localStorage.setItem('impact_tv_user_id', currentUserId);
+    }
+    
+    function showToast(msg, isError) {
+        const toast = document.getElementById('toast');
+        toast.textContent = msg;
+        toast.className = isError ? 'toast error show' : 'toast show';
+        setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+    
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+    
+    function formatDate(dateStr) {
+        if (!dateStr) return 'Date inconnue';
+        const d = new Date(dateStr);
+        return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+    }
+    
+    function normalizeText(text) {
+        return text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    }
+    
+    function saveAll() {
+        localStorage.setItem(STORAGE_EMISSIONS, JSON.stringify(emissions));
+        localStorage.setItem(STORAGE_LIKES, JSON.stringify(likes));
+        localStorage.setItem(STORAGE_COMMENTS, JSON.stringify(comments));
+    }
+    
+    function loadData() {
+        const stored = localStorage.getItem(STORAGE_EMISSIONS);
+        if (stored) {
+            emissions = JSON.parse(stored);
+        } else {
+            emissions = [
+                { id: '1', title: 'Culte du Dimanche - Réveil Spirituel', date: '2024-03-24', description: 'Un culte puissant', videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4', thumbnail: 'https://via.placeholder.com/400x225/1a1a2e/ffd700?text=Culte', keywords: 'genèse création foi' },
+                { id: '2', title: 'Enseignement Biblique - La Foi', date: '2024-03-23', description: 'Découvrez la foi', videoUrl: 'https://www.w3schools.com/html/movie.mp4', thumbnail: 'https://via.placeholder.com/400x225/1a1a2e/ffd700?text=Enseignement', keywords: 'foi croyance' },
+                { id: '3', title: 'Jean 1:1-14 - La Parole faite chair', date: '2024-03-22', description: 'Étude sur le prologue de Jean', videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4', thumbnail: 'https://via.placeholder.com/400x225/1a1a2e/ffd700?text=Jean', keywords: 'jean parole incarnation' }
+            ];
+            saveAll();
+        }
+        
+        const likesStored = localStorage.getItem(STORAGE_LIKES);
+        if (likesStored) likes = JSON.parse(likesStored);
+        else likes = { live: 0 };
+        if (likes.live === undefined) likes.live = 0;
+        
+        const commentsStored = localStorage.getItem(STORAGE_COMMENTS);
+        if (commentsStored) comments = JSON.parse(commentsStored);
+        else comments = { live: [] };
+        if (!comments.live) comments.live = [];
+        
+        emissions.forEach(em => {
+            if (likes[em.id] === undefined) likes[em.id] = 0;
+            if (!comments[em.id]) comments[em.id] = [];
+        });
+        saveAll();
+    }
+    
+    function loadSettings() {
+        const canal = localStorage.getItem(STORAGE_CANAL) || 'n°424';
+        const tnt = localStorage.getItem(STORAGE_TNT) || 'n°4';
+        document.getElementById('canalText').innerText = canal;
+        document.getElementById('tntText').innerText = tnt;
+        
+        const whatsapp = localStorage.getItem(STORAGE_WHATSAPP) || '25367272';
+        const waBtn = document.getElementById('whatsappButton');
+        waBtn.onclick = () => window.open(`https://wa.me/226${whatsapp}?text=Bonjour%20Impact%20TV`, '_blank');
+        waBtn.innerHTML = `<i class="fab fa-whatsapp"></i> WhatsApp : ${whatsapp.slice(0,2)} ${whatsapp.slice(2,4)} ${whatsapp.slice(4,6)} ${whatsapp.slice(6,8)}`;
+    }
+    
+    function updateLikeButton() {
+        const btn = document.getElementById('likeBtn');
+        const countSpan = document.getElementById('likeCount');
+        const currentLikes = likes[currentVideoId] || 0;
+        countSpan.textContent = currentLikes;
+        const hasLiked = localStorage.getItem(`liked_${currentVideoId}`) === 'true';
+        if (hasLiked) {
+            btn.classList.add('liked');
+            btn.innerHTML = `<i class="fas fa-heart"></i><span>${currentLikes}</span>`;
+        } else {
+            btn.classList.remove('liked');
+            btn.innerHTML = `<i class="far fa-heart"></i><span>${currentLikes}</span>`;
+        }
+    }
+    
+    function updateCommentCount() {
+        const count = comments[currentVideoId] ? comments[currentVideoId].length : 0;
+        document.getElementById('commentCount').innerText = count;
+    }
+    
+    function renderComments() {
+        const container = document.getElementById('commentList');
+        const videoComments = comments[currentVideoId] || [];
+        
+        if (videoComments.length === 0) {
+            container.innerHTML = '<div class="empty-comments">Soyez le premier à commenter !</div>';
+            return;
+        }
+        
+        let html = '';
+        videoComments.forEach(c => {
+            const isOwner = (c.userId === currentUserId);
+            html += `
+                <div class="comment-item">
+                    <div class="comment-name">
+                        <span><i class="fas fa-user-circle"></i> ${escapeHtml(c.username || 'Visiteur')}</span>
+                        ${isOwner ? `<button onclick="deleteComment(${c.id}, '${currentVideoId}')"><i class="fas fa-trash-alt"></i></button>` : ''}
+                    </div>
+                    <div class="comment-text">${escapeHtml(c.text)}</div>
+                    <div class="comment-date">${c.date || 'À l\'instant'}</div>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    }
+    
+    function deleteComment(commentId, videoId) {
+        const comment = comments[videoId]?.find(c => c.id === commentId);
+        if (!comment || comment.userId !== currentUserId) {
+            showToast('Vous ne pouvez pas supprimer ce commentaire', true);
+            return;
+        }
+        
+        if (confirm('Supprimer ce commentaire ?')) {
+            comments[videoId] = comments[videoId].filter(c => c.id !== commentId);
+            saveAll();
+            renderComments();
+            updateCommentCount();
+            showToast('Commentaire supprimé', false);
+        }
+    }
+    
+    function playLive() {
+        const liveUrl = localStorage.getItem(STORAGE_LIVE_URL);
+        const video = document.getElementById('mainVideo');
+        if (liveUrl && liveUrl !== '') {
+            video.src = liveUrl;
+            video.load();
+            video.play().catch(e => console.log(e));
+            currentVideoUrl = liveUrl;
+            currentVideoId = 'live';
+            currentVideoTitle = 'Impact TV - Direct';
+            updateLikeButton();
+            updateCommentCount();
+            renderComments();
+            showToast('Impact TV - En direct', false);
+        } else {
+            showToast('Aucun lien de direct configuré', true);
+        }
+    }
+    
+    function playReplay(id) {
+        const emission = emissions.find(e => e.id === id);
+        if (!emission) return;
+        const video = document.getElementById('mainVideo');
+        video.src = emission.videoUrl;
+        video.load();
+        video.play().catch(e => console.log(e));
+        currentVideoUrl = emission.videoUrl;
+        currentVideoId = id;
+        currentVideoTitle = emission.title;
+        updateLikeButton();
+        updateCommentCount();
+        renderComments();
+        showToast(`Lecture: ${emission.title}`, false);
+    }
+    
+    function toggleLike() {
+        const hasLiked = localStorage.getItem(`liked_${currentVideoId}`) === 'true';
+        if (!likes[currentVideoId]) likes[currentVideoId] = 0;
+        if (hasLiked) {
+            likes[currentVideoId]--;
+            localStorage.setItem(`liked_${currentVideoId}`, 'false');
+            showToast('Like retiré', false);
+        } else {
+            likes[currentVideoId]++;
+            localStorage.setItem(`liked_${currentVideoId}`, 'true');
+            showToast('❤️ Merci pour votre like !', false);
+            const btn = document.getElementById('likeBtn');
+            btn.style.transform = 'scale(1.2)';
+            setTimeout(() => btn.style.transform = '', 200);
+        }
+        saveAll();
+        updateLikeButton();
+    }
+    
+    function 
