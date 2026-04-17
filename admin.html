@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Impact TV - Administration</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 100%);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        
+        .login-box {
+            max-width: 400px;
+            margin: 100px auto;
+            background: rgba(26,26,46,0.95);
+            border-radius: 28px;
+            padding: 30px;
+            border: 1px solid rgba(255,215,0,0.4);
+            text-align: center;
+        }
+        .login-box h2 { color: #ffd700; margin-bottom: 20px; }
+        .login-box input {
+            width: 100%;
+            padding: 14px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,215,0,0.3);
+            border-radius: 16px;
+            color: white;
+            font-size: 1rem;
+            text-align: center;
+            letter-spacing: 5px;
+        }
+        .login-box button {
+            margin-top: 20px;
+            width: 100%;
+            padding: 14px;
+            background: #ffd700;
+            border: none;
+            border-radius: 40px;
+            color: #1a1a2e;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .panel { display: none; }
+        .header {
+            background: rgba(255,215,0,0.1);
+            padding: 20px;
+            border-radius: 28px;
+            margin-bottom: 25px;
+            text-align: center;
+            border: 1px solid rgba(255,215,0,0.3);
+        }
+        .header h1 { color: #ffd700; font-size: 1.5rem; }
+        .header p { color: #aaa; font-size: 0.8rem; }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 25px;
+        }
+        .tab-btn {
+            padding: 12px 24px;
+            background: rgba(255,215,0,0.15);
+            border: none;
+            border-radius: 40px;
+            color: #ffd700;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .tab-btn.active {
+            background: #ffd700;
+            color: #1a1a2e;
+        }
+        
+        .card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,215,0,0.2);
+        }
+        .card h3 {
+            color: #ffd700;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #ffd700;
+            font-weight: 500;
+        }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,215,0,0.3);
+            border-radius: 12px;
+            color: white;
+            font-size: 0.9rem;
+        }
+        .btn-primary {
+            background: #ffd700;
+            color: #1a1a2e;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-danger {
+            background: rgba(231,76,60,0.2);
+            color: #e74c3c;
+            border: 1px solid #e74c3c;
+            padding: 8px 16px;
+            border-radius: 30px;
+            cursor: pointer;
+        }
+        .btn-warning {
+            background: rgba(241,196,15,0.2);
+            color: #f1c40f;
+            border: 1px solid #f1c40f;
+            padding: 8px 16px;
+            border-radius: 30px;
+            cursor: pointer;
+        }
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: rgba(255,255,255,0.05);
+            padding: 15px;
+            border-radius: 12px;
+        }
+        .toggle-switch input {
+            width: 50px;
+            height: 25px;
+            appearance: none;
+            background: #555;
+            border-radius: 25px;
+            position: relative;
+            cursor: pointer;
+        }
+        .toggle-switch input:checked {
+            background: #2ecc71;
+        }
+        .toggle-switch input::before {
+            content: '';
+            width: 21px;
+            height: 21px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 3px;
+            transition: 0.2s;
+        }
+        .toggle-switch input:checked::before {
+            left: 26px;
+        }
+        .emissions-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .emission-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255,255,255,0.03);
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+        }
+        .emission-info h4 { font-size: 0.9rem; margin-bottom: 4px; }
+        .emission-info p { font-size: 0.7rem; color: #ffd700; }
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #2ecc71;
+            padding: 10px 20px;
+            border-radius: 30px;
+            transition: 0.3s;
+            z-index: 1000;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); }
+        .toast.error { background: #e74c3c; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="loginSection" class="login-box">
+        <h2><i class="fas fa-lock"></i> Accès Administrateur</h2>
+        <input type="password" id="pinCode" placeholder="CODE PIN" maxlength="6" inputmode="numeric">
+        <button id="loginBtn">Déverrouiller</button>
+    </div>
+
+    <div id="panelSection" class="panel">
+        <div class="header">
+            <h1><i class="fas fa-crown"></i> Impact TV - Administration</h1>
+            <p>Gérez le direct, les replays et les informations en temps réel</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="live">📡 Direct TV</button>
+            <button class="tab-btn" data-tab="replays">📼 Replays</button>
+            <button class="tab-btn" data-tab="info">⚙️ Informations</button>
+        </div>
+
+        <div id="liveTab" class="tab-content active">
+            <div class="card">
+                <h3><i class="fas fa-satellite-dish"></i> Lien du direct</h3>
+                <div class="form-group">
+                    <label>URL du streaming (HLS/MP4)</label>
+                    <input type="url" id="liveUrl" placeholder="https://...">
+                </div>
+                <button id="updateLiveBtn" class="btn-primary"><i class="fas fa-save"></i> Mettre à jour</button>
+            </div>
+
+            <div class="card">
+                <h3><i class="fas fa-download"></i> Autorisation de téléchargement</h3>
+                <div class="toggle-switch">
+                    <span>🔓 Téléchargement autorisé</span>
+                    <input type="checkbox" id="downloadEnabled">
+                </div>
+                <p style="font-size: 0.7rem; color: #aaa; margin-top: 10px;">
+                    Si désactivé, les utilisateurs verront un message : "Téléchargement non autorisé par l'administrateur"
+                </p>
+                <button id="updateDownloadBtn" class="btn-primary" style="margin-top: 15px;"><i class="fas fa-save"></i> Mettre à jour</button>
+            </div>
+        </div>
+
+        <div id="replaysTab" class="tab-content">
+            <div class="card">
+                <h3><i class="fas fa-plus-circle"></i> Ajouter un replay</h3>
+                <div class="form-group">
+                    <label>Titre</label>
+                    <input type="text" id="emissionTitle" placeholder="Ex: Culte du Dimanche 30 mars">
+                </div>
+                <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" id="emissionDate">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="emissionDesc" rows="2" placeholder="Description de l'émission"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Lien de la vidéo (URL)</label>
+                    <input type="url" id="emissionUrl" placeholder="https://...">
+                </div>
+                <div class="form-group">
+                    <label>Miniature (URL)</label>
+                    <input type="url" id="emissionThumb" placeholder="https://...">
+                </div>
+                <button id="addEmissionBtn" class="btn-primary"><i class="fas fa-plus"></i> Ajouter le replay</button>
+            </div>
+
+            <div class="card">
+                <h3><i class="fas fa-list"></i> Gérer les replays</h3>
+                <div id="emissionsList" class="emissions-list">
+                    <p style="text-align:center; color:#888;">Chargement...</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="infoTab" class="tab-content">
+            <div class="card">
+                <h3><i class="fas fa-tv"></i> Informations de réception</h3>
+                <div class="form-group">
+                    <label>Canal+</label>
+                    <input type="text" id="canalInput" placeholder="n°424">
+                </div>
+                <div class="form-group">
+                    <label>TNT Burkina Faso</label>
+                    <input type="text" id="tntInput" placeholder="n°4">
+                </div>
+                <div class="form-group">
+                    <label>WhatsApp</label>
+                    <input type="tel" id="whatsappInput" placeholder="25367272">
+                </div>
+                <button id="updateInfoBtn" class="btn-primary"><i class="fas fa-save"></i> Mettre à jour</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>    // ==================== FIREBASE CONFIGURATION ====================
+    const firebaseConfig = {
+        apiKey: "AIzaSyAetkuLcYgAfdkuwvMjZ11WukfgFHnbulo",
+        authDomain: "faso-opportunites-57088.firebaseapp.com",
+        projectId: "faso-opportunites-57088",
+        storageBucket: "faso-opportunites-57088.firebasestorage.app",
+        messagingSenderId: "489210307173",
+        appId: "1:489210307173:web:1a14ce1e19ff0054331c8c"
+    };
+    
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+    
+    const liveUrlRef = database.ref('direct/liveUrl');
+    const downloadEnabledRef = database.ref('config/downloadEnabled');
+    const emissionsRef = database.ref('emissions');
+    const canalRef = database.ref('info/canal');
+    const tntRef = database.ref('info/tnt');
+    const whatsappRef = database.ref('info/whatsapp');
+    
+    function showToast(msg, isError = false) {
+        const toast = document.getElementById('toast');
+        toast.textContent = msg;
+        toast.className = isError ? 'toast error show' : 'toast show';
+        setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+    
+    function loadCurrentValues() {
+        liveUrlRef.once('value').then(snapshot => {
+            const url = snapshot.val();
+            if (url) document.getElementById('liveUrl').value = url;
+        });
+        downloadEnabledRef.once('value').then(snapshot => {
+            const enabled = snapshot.val();
+            if (enabled !== null) document.getElementById('downloadEnabled').checked = enabled;
+        });
+        canalRef.once('value').then(snapshot => {
+            const val = snapshot.val();
+            if (val) document.getElementById('canalInput').value = val;
+        });
+        tntRef.once('value').then(snapshot => {
+            const val = snapshot.val();
+            if (val) document.getElementById('tntInput').value = val;
+        });
+        whatsappRef.once('value').then(snapshot => {
+            const val = snapshot.val();
+            if (val) document.getElementById('whatsappInput').value = val;
+        });
+    }
+    
+    function loadEmissionsList() {
+        emissionsRef.once('value').then(snapshot => {
+            const emissions = snapshot.val();
+            const container = document.getElementById('emissionsList');
+            if (!emissions || Object.keys(emissions).length === 0) {
+                container.innerHTML = '<p style="text-align:center; color:#888;">Aucun replay. Ajoutez-en !</p>';
+                return;
+            }
+            let html = '';
+            Object.entries(emissions).forEach(([id, em]) => {
+                html += `
+                    <div class="emission-item">
+                        <div class="emission-info">
+                            <h4>${escapeHtml(em.title)}</h4>
+                            <p>${em.date || 'Date non définie'}</p>
+                        </div>
+                        <div>
+                            <button class="btn-warning" onclick="editEmission('${id}', '${escapeHtml(em.title)}', '${em.date || ''}', '${escapeHtml(em.description || '')}', '${em.videoUrl || ''}', '${em.thumbnail || ''}')">✏️ Modifier</button>
+                            <button class="btn-danger" onclick="deleteEmission('${id}')">🗑️ Supprimer</button>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        });
+    }
+    
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m] || m));
+    }
+    
+    document.getElementById('addEmissionBtn').onclick = () => {
+        const title = document.getElementById('emissionTitle').value.trim();
+        const date = document.getElementById('emissionDate').value;
+        const desc = document.getElementById('emissionDesc').value;
+        const videoUrl = document.getElementById('emissionUrl').value.trim();
+        const thumbnail = document.getElementById('emissionThumb').value.trim();
+        
+        if (!title || !videoUrl) {
+            showToast('Titre et lien vidéo obligatoires', true);
+            return;
+        }
+        
+        const newEmission = {
+            title: title,
+            date: date || new Date().toISOString().split('T')[0],
+            description: desc,
+            videoUrl: videoUrl,
+            thumbnail: thumbnail || 'https://via.placeholder.com/400x225/1a1a2e/ffd700?text=Impact+TV'
+        };
+        
+        emissionsRef.push(newEmission).then(() => {
+            showToast('✅ Replay ajouté !');
+            document.getElementById('emissionTitle').value = '';
+            document.getElementById('emissionDate').value = '';
+            document.getElementById('emissionDesc').value = '';
+            document.getElementById('emissionUrl').value = '';
+            document.getElementById('emissionThumb').value = '';
+            loadEmissionsList();
+        }).catch(() => showToast('Erreur lors de l\'ajout', true));
+    };
+    
+    window.editEmission = (id, title, date, desc, videoUrl, thumbnail) => {
+        document.getElementById('emissionTitle').value = title;
+        document.getElementById('emissionDate').value = date;
+        document.getElementById('emissionDesc').value = desc;
+        document.getElementById('emissionUrl').value = videoUrl;
+        document.getElementById('emissionThumb').value = thumbnail;
+        window.editId = id;
+        document.getElementById('addEmissionBtn').textContent = '✏️ Modifier';
+        document.getElementById('addEmissionBtn').onclick = () => {
+            const updatedEmission = {
+                title: document.getElementById('emissionTitle').value.trim(),
+                date: document.getElementById('emissionDate').value || new Date().toISOString().split('T')[0],
+                description: document.getElementById('emissionDesc').value,
+                videoUrl: document.getElementById('emissionUrl').value.trim(),
+                thumbnail: document.getElementById('emissionThumb').value.trim() || 'https://via.placeholder.com/400x225/1a1a2e/ffd700?text=Impact+TV'
+            };
+            emissionsRef.child(window.editId).update(updatedEmission).then(() => {
+                showToast('✅ Replay modifié !');
+                loadEmissionsList();
+                document.getElementById('addEmissionBtn').textContent = '➕ Ajouter';
+                document.getElementById('addEmissionBtn').onclick = originalAddHandler;
+                document.getElementById('emissionTitle').value = '';
+                document.getElementById('emissionDate').value = '';
+                document.getElementById('emissionDesc').value = '';
+                document.getElementById('emissionUrl').value = '';
+                document.getElementById('emissionThumb').value = '';
+                delete window.editId;
+            }).catch(() => showToast('Erreur lors de la modification', true));
+        };
+    };
+    
+    const originalAddHandler = document.getElementById('addEmissionBtn').onclick;
+    
+    window.deleteEmission = (id) => {
+        if (confirm('Supprimer cette émission ?')) {
+            emissionsRef.child(id).remove().then(() => {
+                showToast('Replay supprimé');
+                loadEmissionsList();
+            }).catch(() => showToast('Erreur lors de la suppression', true));
+        }
+    };
+    
+    document.getElementById('updateLiveBtn').onclick = () => {
+        const url = document.getElementById('liveUrl').value.trim();
+        if (!url) {
+            showToast('Veuillez entrer un lien', true);
+            return;
+        }
+        liveUrlRef.set(url).then(() => showToast('✅ Lien du direct mis à jour !')).catch(() => showToast('Erreur', true));
+    };
+    
+    document.getElementById('updateDownloadBtn').onclick = () => {
+        const enabled = document.getElementById('downloadEnabled').checked;
+        downloadEnabledRef.set(enabled).then(() => showToast('✅ Autorisation mise à jour !')).catch(() => showToast('Erreur', true));
+    };
+    
+    document.getElementById('updateInfoBtn').onclick = () => {
+        const canal = document.getElementById('canalInput').value;
+        const tnt = document.getElementById('tntInput').value;
+        const whatsapp = document.getElementById('whatsappInput').value;
+        if (canal) canalRef.set(canal);
+        if (tnt) tntRef.set(tnt);
+        if (whatsapp) whatsappRef.set(whatsapp);
+        showToast('✅ Informations mises à jour !');
+    };
+    
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tab = btn.dataset.tab;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById(`${tab}Tab`).classList.add('active');
+        });
+    });
+    
+    document.getElementById('loginBtn').onclick = () => {
+        const pin = document.getElementById('pinCode').value;
+        if (pin === '010101') {
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('panelSection').style.display = 'block';
+            loadCurrentValues();
+            loadEmissionsList();
+            showToast('Bienvenue Administrateur !');
+        } else {
+            showToast('Code PIN incorrect', true);
+        }
+    };
+    
+    document.getElementById('pinCode').onkeypress = (e) => {
+        if (e.key === 'Enter') document.getElementById('loginBtn').click();
+    };
+</script>
+</body>
+</html>
