@@ -390,4 +390,31 @@
             <div class="box-search">
                 <i class="fas fa-search"></i>
                 <input type="text" id="boxSearch" placeholder="Rechercher une vidéo (ex: Pasteur Karambiri, Superbook, Moïse...)">
-                <button onclick="doBoxSearch()">
+                <button onclick="doBoxSearch()"><i class="fas fa-arrow-right"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="box-cats" id="boxCats">
+        <button class="box-cat active" data-cat="karambiri" onclick="setBoxCategory('karambiri')">🎤 Pasteur Karambiri</button>
+        <button class="box-cat" data-cat="superbook" onclick="setBoxCategory('superbook')">📺 Superbook Enfants</button>
+        <button class="box-cat" data-cat="films" onclick="setBoxCategory('films')">🎬 Films Bibliques</button>
+        <button class="box-cat" data-cat="archives" onclick="setBoxCategory('archives')">📚 Archives & Tournées</button>
+        <button class="box-cat" data-cat="musique" onclick="setBoxCategory('musique')">🎵 Louange & Musique</button>
+    </div>
+
+    <div class="box-grid" id="boxGrid"></div>
+    <div class="box-loader" id="boxLoader"><i class="fas fa-spinner fa-spin"></i> Chargement...</div>
+</div>
+
+<div id="boxModal" class="box-modal">
+    <div class="box-modal-header">
+        <h3 id="boxModalTitle"></h3>
+        <button class="box-modal-close" onclick="closeBoxModal()">×</button>
+    </div>
+    <div class="box-modal-body" id="boxModalBody"></div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
