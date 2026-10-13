@@ -417,4 +417,458 @@
 
 <div id="toast" class="toast"></div>
 
-<script>
+<script>    // ==================== FIREBASE ====================
+    const firebaseConfig = {
+        apiKey: "AIzaSyAetkuLcYgAfdkuwvMjZ11WukfgFHnbulo",
+        authDomain: "faso-opportunites-57088.firebaseapp.com",
+        projectId: "faso-opportunites-57088",
+        storageBucket: "faso-opportunites-57088.firebasestorage.app",
+        messagingSenderId: "489210307173",
+        appId: "1:489210307173:web:1a14ce1e19ff0054331c8c"
+    };
+    
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+    
+    const liveUrlRef = database.ref('direct/liveUrl');
+    const canalRef = database.ref('info/canal');
+    const tntRef = database.ref('info/tnt');
+    const whatsappRef = database.ref('info/whatsapp');
+    const boxCustomRef = database.ref('box/custom');
+    
+    // ==================== VARIABLES ====================
+    let currentLiveUrl = null;
+    let currentVideoUrl = "https://www.w3schools.com/html/mov_bbb.mp4";
+    let currentVideoTitle = "Impact TV - Direct";
+    
+    let boxCategory = 'karambiri';
+    let boxQuery = '';
+    let boxVideos = [];
+    let boxLoading = false;
+    let boxCustomVideos = [];
+    
+    const PIPED_INSTANCES = [
+        'https://pipedapi.kavin.rocks',
+        'https://pipedapi.adminforge.de',
+        'https://api.piped.private.coffee',
+        'https://pipedapi.reallyaweso.me',
+        'https://pipedapi.drgns.space'
+    ];
+    
+    const BOX_CONFIG = {
+        karambiri: { src: 'youtube', q: 'Pasteur Mamadou Karambiri prédication française' },
+        superbook: { src: 'youtube', q: 'Superbook français dessin animé bible enfant VF' },
+        films:     { src: 'youtube', q: 'film biblique français Moïse Abraham David Jésus VF complet' },
+        archives:  { src: 'youtube', q: 'Pasteur Mamadou Karambiri tournée Inde Bénin États-Unis prédication' },
+        musique:   { src: 'youtube', q: 'louange adoration chrétienne française cantique bible' }
+    };
+    
+    // ==================== UTILITAIRES ====================
+    function showToast(msg, isError = false) {
+        const toast = document.getElementById('toast');
+        toast.textContent = msg;
+        toast.className = isError ? 'toast error show' : 'toast show';
+        setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+    
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m] || m));
+    }
+    
+    function switchMainView(view, btn) {
+        document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.main-view').forEach(v => v.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+        document.getElementById('view-' + view).classList.add('active');
+        if (view === 'box' && boxVideos.length === 0) loadBox(true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    
+    // ==================== LECTEUR DIRECT ====================
+    function playVideo(url, title) {
+        const video = document.getElementById('mainVideo');
+        video.src = url;
+        video.load();
+        video.play().catch(e => console.log("Lecture auto bloquée"));
+        currentVideoUrl = url;
+        currentVideoTitle = title;
+        showToast('📺 Lecture: ' + title);
+    }
+    
+    function playLive() {
+        if (currentLiveUrl) {
+            playVideo(currentLiveUrl, 'Impact TV - Direct');
+        } else {
+            showToast('Aucun lien de direct configuré', true);
+        }
+    }
+    
+    document.getElementById('watchBtn').onclick = () => playLive();
+    
+    // ==================== FIREBASE SYNC ====================
+    liveUrlRef.on('value', (snapshot) => {
+        const url = snapshot.val();
+        if (url) {
+            currentLiveUrl = url;
+            showToast('📡 Le direct a été mis à jour');
+        }
+    });
+    
+    canalRef.on('value', (s) => { const v = s.val(); if (v) document.getElementById('canalText').innerText = v; });
+    tntRef.on('value', (s) => { const v = s.val(); if (v) document.getElementById('tntText').innerText = v; });
+    whatsappRef.on('value', (s) => {
+        const v = s.val();
+        if (v) {
+            const formatted = `${v.slice(0,2)} ${v.slice(2,4)} ${v.slice(4,6)} ${v.slice(6,8)}`;
+            const waBtn = document.getElementById('whatsappButton');
+            waBtn.innerHTML = `<i class="fab fa-whatsapp"></i> WhatsApp : ${formatted}`;
+            waBtn.onclick = () => window.open(`https://wa.me/226${v}?text=Bonjour%20Impact%20TV`, '_blank');
+        }
+    });
+    
+    boxCustomRef.on('value', (snapshot) => {
+        const data = snapshot.val();
+        boxCustomVideos = data ? Object.values(data) : [];
+    });
+    
+    // ==================== RECHERCHE ÉMISSIONS ====================
+    document.getElementById('searchInput').oninput = function(e) {
+        const term = e.target.value.toLowerCase();
+        document.querySelectorAll('.replay-card').forEach(card => {
+            const title = card.querySelector('.replay-title').textContent.toLowerCase();
+            card.style.display = title.includes(term) ? '' : 'none';
+        });
+    };
+    
+    // ==================== PARTAGE ====================
+    function openNativeShare(title, text, url) {
+        if (navigator.share) {
+            navigator.share({ title, text, url }).catch(e => console.log);
+        } else {
+            navigator.clipboard.writeText(url).then(() => showToast('📋 Lien copié !'));
+        }
+    }
+    
+    document.getElementById('shareBtn').onclick = () => {
+        openNativeShare(currentVideoTitle, 'Regardez ' + currentVideoTitle + ' sur Impact TV', window.location.href);
+    };
+    
+    window.shareVideo = (title, url) => {
+        openNativeShare(title, 'Regardez "' + title + '" sur Impact TV', url);
+    };
+    
+    // ==================== TÉLÉCHARGEMENT ====================
+    window.downloadVideo = function(url, title) {
+        fetch(url).then(r => r.blob()).then(blob => {
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'Impact_TV_' + title.replace(/[^a-z0-9]/gi, '_') + '.mp4';
+            a.click();
+            URL.revokeObjectURL(a.href);
+            showToast('✅ Téléchargement démarré !');
+        }).catch(() => { window.open(url, '_blank'); showToast('Ouverture dans nouvel onglet'); });
+    };
+    
+    document.getElementById('downloadBtn').onclick = () => {
+        window.downloadVideo(currentVideoUrl, currentVideoTitle);
+    };
+    
+    // ==================== BIBLE LOUIS SEGOND (Lien direct vers Bible.com) ====================
+    // Correspondance Français → Code Bible.com
+    const BIBLE_CODES = {
+        'genese': 'GEN', 'genèse': 'GEN', 'gen': 'GEN',
+        'exode': 'EXO', 'exo': 'EXO',
+        'levitique': 'LEV', 'lévitique': 'LEV',
+        'nombres': 'NUM', 'nom': 'NUM',
+        'deuteronome': 'DEU', 'deutéronome': 'DEU',
+        'josue': 'JOS', 'josué': 'JOS',
+        'juges': 'JDG',
+        'ruth': 'RUT',
+        '1samuel': '1SA', '1sam': '1SA', '1 samuel': '1SA',
+        '2samuel': '2SA', '2sam': '2SA', '2 samuel': '2SA',
+        '1rois': '1KI', '1roi': '1KI', '1 roi': '1KI', '1rois': '1KI',
+        '2rois': '2KI', '2roi': '2KI', '2 roi': '2KI',
+        '1chroniques': '1CH', '1chr': '1CH',
+        '2chroniques': '2CH', '2chr': '2CH',
+        'esdras': 'EZR',
+        'nehemie': 'NEH', 'néhémie': 'NEH',
+        'esther': 'EST',
+        'job': 'JOB',
+        'psaume': 'PSA', 'psaumes': 'PSA', 'ps': 'PSA',
+        'proverbes': 'PRO', 'prov': 'PRO',
+        'ecclesiaste': 'ECC', 'ecclésiaste': 'ECC',
+        'cantique': 'SNG', 'cantiques': 'SNG',
+        'esaie': 'ISA', 'ésaïe': 'ISA',
+        'jeremie': 'JER', 'jérémie': 'JER',
+        'lamentations': 'LAM',
+        'ezechiel': 'EZK', 'ézéchiel': 'EZK',
+        'daniel': 'DAN', 'dan': 'DAN',
+        'osee': 'HOS', 'osée': 'HOS',
+        'joel': 'JOL',
+        'amos': 'AMO',
+        'abdias': 'OBA',
+        'jonas': 'JON',
+        'michee': 'MIC', 'michée': 'MIC',
+        'nahum': 'NAM',
+        'habacuc': 'HAB',
+        'sophonie': 'ZEP',
+        'aggee': 'HAG', 'aggée': 'HAG',
+        'zacharie': 'ZEC',
+        'malachie': 'MAL',
+        'matthieu': 'MAT', 'matt': 'MAT', 'mt': 'MAT',
+        'marc': 'MRK', 'mc': 'MRK',
+        'luc': 'LUK', 'lc': 'LUK',
+        'jean': 'JHN', 'jn': 'JHN',
+        'actes': 'ACT', 'act': 'ACT',
+        'romains': 'ROM', 'rom': 'ROM',
+        '1corinthiens': '1CO', '1cor': '1CO',
+        '2corinthiens': '2CO', '2cor': '2CO',
+        'galates': 'GAL', 'gal': 'GAL',
+        'ephesiens': 'EPH', 'éphésiens': 'EPH',
+        'philippiens': 'PHP', 'phil': 'PHP',
+        'colossiens': 'COL', 'col': 'COL',
+        '1thessaloniciens': '1TH', '1thess': '1TH',
+        '2thessaloniciens': '2TH', '2thess': '2TH',
+        '1timothee': '1TI', '1timothée': '1TI',
+        '2timothee': '2TI', '2timothée': '2TI',
+        'tite': 'TIT',
+        'philemon': 'PHM', 'philémon': 'PHM',
+        'hebreux': 'HEB', 'hébreux': 'HEB',
+        'jacques': 'JAS', 'jac': 'JAS',
+        '1pierre': '1PE', '1pie': '1PE',
+        '2pierre': '2PE', '2pie': '2PE',
+        '1jean': '1JN', '1jn': '1JN',
+        '2jean': '2JN', '2jn': '2JN',
+        '3jean': '3JN', '3jn': '3JN',
+        'jude': 'JUD',
+        'apocalypse': 'REV', 'apoc': 'REV', 'rev': 'REV'
+    };
+    
+    document.getElementById('askIaBtn').onclick = () => {
+        let query = document.getElementById('iaQuestion').value.trim().toLowerCase();
+        if (!query) return showToast('📝 Entrez une référence biblique');
+        
+        // Remplacer les points par des deux-points
+        query = query.replace(/\.(\d)/g, ':$1');
+        
+        // Détecter le livre, le chapitre et le verset
+        const match = query.match(/^(\d?\s*[a-zéèêëàâäîïôöûüç\s]+?)\s*(\d+)(?::(\d+))?$/i);
+        
+        let url = '';
+        
+        if (match) {
+            let bookName = match[1].toLowerCase().replace(/\s+/g, '');
+            const chapter = match[2];
+            
+            // Trouver le code du livre
+            let code = BIBLE_CODES[bookName];
+            
+            if (!code) {
+                for (const [fr, c] of Object.entries(BIBLE_CODES)) {
+                    if (bookName.startsWith(fr) || fr.startsWith(bookName)) {
+                        code = c;
+                        break;
+                    }
+                }
+            }
+            
+            if (code) {
+                // URL directe vers le chapitre (Louis Segond = LSG)
+                url = `https://www.bible.com/fr/bible/93/${code}.${chapter}.LSG`;
+            } else {
+                // Recherche libre
+                url = `https://www.bible.com/fr/search?q=${encodeURIComponent(query)}`;
+            }
+        } else {
+            // Recherche libre
+            url = `https://www.bible.com/fr/search?q=${encodeURIComponent(query)}`;
+        }
+        
+        // Ouvrir dans un nouvel onglet
+        window.open(url, '_blank');
+        
+        showToast('📖 Ouverture de la Bible Louis Segond...');
+        document.getElementById('iaQuestion').value = '';
+    };
+    
+    document.getElementById('iaQuestion').onkeypress = (e) => {
+        if (e.key === 'Enter') document.getElementById('askIaBtn').click();
+    };
+    
+    // ==================== BOX ====================
+    async function loadBox(reset = false) {
+        if (boxLoading) return;
+        boxLoading = true;
+        
+        if (reset) {
+            boxVideos = [];
+            document.getElementById('boxGrid').innerHTML = '';
+        }
+        
+        const loader = document.getElementById('boxLoader');
+        loader.style.display = 'block';
+        loader.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Chargement...';
+        
+        try {
+            let items = [];
+            
+            const customForCat = boxCustomVideos.filter(v => v.category === boxCategory);
+            items = items.concat(customForCat.map(v => ({
+                id: 'c_' + v.id,
+                title: v.title,
+                author: v.author || 'Impact TV',
+                thumb: v.thumb || `https://i.ytimg.com/vi/${v.videoId}/hqdefault.jpg`,
+                type: 'youtube',
+                videoId: v.videoId,
+                custom: true,
+                duration: v.duration || 0
+            })));
+            
+            if (boxQuery) {
+                const ytItems = await searchYouTube(boxQuery);
+                items = items.concat(ytItems);
+            } else {
+                const cfg = BOX_CONFIG[boxCategory] || BOX_CONFIG['karambiri'];
+                if (cfg.src === 'youtube') {
+                    const ytItems = await searchYouTube(cfg.q);
+                    items = items.concat(ytItems);
+                }
+            }
+            
+            if (items.length === 0) {
+                loader.innerHTML = '<p style="color:#6b7280;">Aucune vidéo trouvée. Essayez une autre recherche.</p>';
+                boxLoading = false;
+                return;
+            }
+            
+            boxVideos = items;
+            renderBox();
+            loader.style.display = 'none';
+        } catch (e) {
+            console.error(e);
+            loader.innerHTML = '<p style="color:#e74c3c;">Erreur de chargement. Réessayez.</p>';
+        }
+        
+        boxLoading = false;
+    }
+    
+    async function searchYouTube(query) {
+        for (const inst of PIPED_INSTANCES) {
+            try {
+                const url = `${inst}/search?q=${encodeURIComponent(query)}&filter=videos`;
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 7000);
+                const res = await fetch(url, { signal: controller.signal });
+                clearTimeout(timeout);
+                if (!res.ok) continue;
+                const data = await res.json();
+                const items = (data?.items || []).filter(i => i.type === 'stream' && i.url);
+                if (items.length === 0) continue;
+                
+                return items.slice(0, 20).map(v => {
+                    const vid = (v.url || '').split('v=')[1]?.split('&')[0] || '';
+                    const thumb = `https://i.ytimg.com/vi/${vid}/hqdefault.jpg`;
+                    return {
+                        id: 'y_' + vid,
+                        title: v.title || 'Sans titre',
+                        author: v.uploaderName || '',
+                        thumb: thumb,
+                        duration: v.duration || 0,
+                        type: 'youtube',
+                        videoId: vid
+                    };
+                }).filter(v => v.videoId);
+            } catch (e) { continue; }
+        }
+        return [];
+    }
+    
+    function renderBox() {
+        const grid = document.getElementById('boxGrid');
+        grid.innerHTML = boxVideos.map(v => {
+            let durationBadge = '';
+            if (v.duration && v.duration > 0) {
+                const h = Math.floor(v.duration / 3600);
+                const m = Math.floor((v.duration % 3600) / 60);
+                const s = v.duration % 60;
+                const dur = h > 0 
+                    ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+                    : `${m}:${String(s).padStart(2,'0')}`;
+                durationBadge = `<span class="box-duration">${dur}</span>`;
+            }
+            
+            return `
+                <div class="box-card" onclick="openBoxVideo('${v.id}')">
+                    <div class="box-thumb">
+                        <img src="${v.thumb}" 
+                             loading="lazy" 
+                             alt="${escapeHtml(v.title)}"
+                             onerror="this.onerror=null; this.src='https://i.ytimg.com/vi/${v.videoId}/mqdefault.jpg';">
+                        <div class="box-play-icon"><i class="fas fa-play"></i></div>
+                        ${durationBadge}
+                    </div>
+                    <div class="box-info">
+                        <div class="box-title">${escapeHtml(v.title)}</div>
+                        ${v.author ? `<div class="box-author">${escapeHtml(v.author)}</div>` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+    
+    function setBoxCategory(cat) {
+        boxCategory = cat;
+        boxQuery = '';
+        document.getElementById('boxSearch').value = '';
+        document.querySelectorAll('.box-cat').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
+        loadBox(true);
+    }
+    
+    function doBoxSearch() {
+        const q = document.getElementById('boxSearch').value.trim();
+        if (!q) return loadBox(true);
+        boxQuery = q;
+        document.querySelectorAll('.box-cat').forEach(b => b.classList.remove('active'));
+        loadBox(true);
+    }
+    
+    document.getElementById('boxSearch').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') doBoxSearch();
+    });
+    
+    function openBoxVideo(id) {
+        const v = boxVideos.find(x => x.id === id);
+        if (!v) return;
+        
+        const modal = document.getElementById('boxModal');
+        const title = document.getElementById('boxModalTitle');
+        const body = document.getElementById('boxModalBody');
+        
+        title.textContent = v.title;
+        body.innerHTML = `<iframe src="https://www.youtube.com/embed/${v.videoId}?autoplay=1&rel=0" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>`;
+        
+        modal.classList.add('open');
+    }
+    
+    function closeBoxModal() {
+        document.getElementById('boxModal').classList.remove('open');
+        document.getElementById('boxModalBody').innerHTML = '';
+    }
+    
+    // ==================== INITIALISATION ====================
+    window.addEventListener('load', () => {
+        showToast('✅ Impact TV prêt');
+    });
+    
+    window.switchMainView = switchMainView;
+    window.playVideo = playVideo;
+    window.shareVideo = shareVideo;
+    window.downloadVideo = downloadVideo;
+    window.setBoxCategory = setBoxCategory;
+    window.doBoxSearch = doBoxSearch;
+    window.openBoxVideo = openBoxVideo;
+    window.closeBoxModal = closeBoxModal;
+</script>
+</body>
+</html>
