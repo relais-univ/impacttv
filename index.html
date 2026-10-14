@@ -873,5 +873,42 @@
             <p class="subtitle" id="userFiliere">Ville</p>
             
             <div id="userContacts" class="user-contacts" style="justify-content:center;"></div>
-            
+                        <div class="profile-actions" style="margin-top:20px;">
+                <button class="btn-outline" onclick="openEditProfile()">
+                    <i class="fas fa-edit"></i> Modifier mon profil
+                </button>
+                <button class="btn-outline danger" onclick="logoutProfile()">
+                    <i class="fas fa-sign-out-alt"></i> Se déconnecter
+                </button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div id="boxModal" class="box-modal">
+    <div class="box-modal-header">
+        <h3 id="boxModalTitle"></h3>
+        <button class="box-modal-close" onclick="closeBoxModal()">×</button>
+    </div>
+    <div class="box-modal-body" id="boxModalBody"></div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<nav class="bottom-nav">
+    <button class="nav-btn active" id="nav-home" onclick="switchView('home')">
+        <i class="fas fa-home"></i><span>Accueil</span>
+    </button>
+    <button class="nav-btn" id="nav-box" onclick="switchView('box')">
+        <i class="fas fa-film"></i><span>Box</span>
+    </button>
+    <button class="nav-btn" id="nav-community" onclick="switchView('community')">
+        <i class="fas fa-users"></i><span>Communauté</span>
+    </button>
+    <button class="nav-btn" id="nav-profile" onclick="switchView('profile')">
+        <i class="fas fa-user-circle"></i><span>Profil</span>
+    </button>
+</nav>
+
+<script>
             
