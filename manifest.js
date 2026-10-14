@@ -13,7 +13,7 @@
   "categories": ["religion", "video", "education"],
   "icons": [
     {
-      "src": "icône.png",
+      "src": "icon.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
@@ -32,7 +32,7 @@
       "short_name": "Box",
       "description": "Prédications, films et archives",
       "url": "index.html#box",
-      "icons": [{ "src": "icône.png", "sizes": "512x512" }]
+      "icons": [{ "src": "icon.png", "sizes": "512x512" }]
     },
     {
       "name": "Communauté",
