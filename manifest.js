@@ -25,7 +25,7 @@
       "short_name": "Direct",
       "description": "Regarder Impact TV en direct",
       "url": "index.html#home",
-      "icons": [{ "src": "icône.png", "sizes": "512x512" }]
+      "icons": [{ "src": "icon.png", "sizes": "512x512" }]
     },
     {
       "name": "Box Impact TV",
@@ -39,7 +39,7 @@
       "short_name": "Communauté",
       "description": "Publications et amis",
       "url": "index.html#community",
-      "icons": [{ "src": "icône.png", "sizes": "512x512" }]
+      "icons": [{ "src": "icon.png", "sizes": "512x512" }]
     }
   ]
 }
