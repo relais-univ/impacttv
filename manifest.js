@@ -13,7 +13,7 @@
   "categories": ["religion", "video", "education"],
   "icons": [
     {
-      "src": "icon.png",
+      "src": "icône.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
@@ -25,21 +25,21 @@
       "short_name": "Direct",
       "description": "Regarder Impact TV en direct",
       "url": "index.html#home",
-      "icons": [{ "src": "icon.png", "sizes": "512x512" }]
+      "icons": [{ "src": "icône.png", "sizes": "512x512" }]
     },
     {
       "name": "Box Impact TV",
       "short_name": "Box",
-      "description": "Prédications, films et archives",
+      "description": "Prédications, films et louange",
       "url": "index.html#box",
-      "icons": [{ "src": "icon.png", "sizes": "512x512" }]
+      "icons": [{ "src": "icône.png", "sizes": "512x512" }]
     },
     {
       "name": "Communauté",
       "short_name": "Communauté",
       "description": "Publications et amis",
       "url": "index.html#community",
-      "icons": [{ "src": "icon.png", "sizes": "512x512" }]
+      "icons": [{ "src": "icône.png", "sizes": "512x512" }]
     }
   ]
 }
