@@ -1801,4 +1801,44 @@
     
     function openBoxVideo(id) {
         const v = boxVideos.find(x => x.id === id);
-          
+                if (!v) return;
+        document.getElementById('boxModalTitle').textContent = v.title;
+        document.getElementById('boxModalBody').innerHTML = 
+            `<iframe src="https://www.youtube.com/embed/${v.videoId}?autoplay=1&rel=0" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>`;
+        document.getElementById('boxModal').classList.add('open');
+    }
+    
+    function closeBoxModal() {
+        document.getElementById('boxModal').classList.remove('open');
+        document.getElementById('boxModalBody').innerHTML = '';
+    }
+    
+    // ==================== INITIALISATION ====================
+    window.addEventListener('load', () => {
+        updateOnlineStatus();
+        checkUserProfile();
+        updateInstallButton();
+    });
+    
+    window.switchView = switchView;
+    window.playVideo = playVideo;
+    window.shareVideo = shareVideo;
+    window.downloadVideo = downloadVideo;
+    window.downloadBoxVideo = downloadBoxVideo;
+    window.setBoxCategory = setBoxCategory;
+    window.doBoxSearch = doBoxSearch;
+    window.openBoxVideo = openBoxVideo;
+    window.closeBoxModal = closeBoxModal;
+    window.registerUser = registerUser;
+    window.openEditProfile = openEditProfile;
+    window.cancelEdit = cancelEdit;
+    window.logoutProfile = logoutProfile;
+    window.filterCommunity = filterCommunity;
+    window.switchCommunityTab = switchCommunityTab;
+    window.previewPostImage = previewPostImage;
+    window.publishPost = publishPost;
+    window.deletePost = deletePost;
+    window.handleAvatarUpload = handleAvatarUpload;
+</script>
+</body>
+</html>  
