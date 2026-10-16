@@ -1223,17 +1223,46 @@
         openNativeShare(title, 'Regardez "' + title + '" sur Impact TV', url);
     };
     
-    // ==================== TÉLÉCHARGEMENT ====================
-    window.downloadVideo = function(url, title) {
-        fetch(url).then(r => r.blob()).then(blob => {
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = 'Impact_TV_' + title.replace(/[^a-z0-9]/gi, '_') + '.mp4';
-            a.click();
-            URL.revokeObjectURL(a.href);
-            showToast('✅ Téléchargement démarré !');
-        }).catch(() => { window.open(url, '_blank'); showToast('Ouverture dans nouvel onglet'); });
-    };
+    // ==================== TÉLÉCHARGEMENT (Replay accueil - avec partage galerie) ====================
+window.downloadVideo = async function(url, title) {
+    showToast('⏳ Téléchargement en cours...');
+    try {
+        const res = await fetch(url);
+        const blob = await res.blob();
+        const fileName = 'Impact_TV_' + title.replace(/[^a-z0-9]/gi, '_').substring(0, 50) + '.mp4';
+        const file = new File([blob], fileName, { type: 'video/mp4' });
+        
+        // Essaie le partage natif vers la galerie
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            try {
+                await navigator.share({
+                    files: [file],
+                    title: title,
+                    text: 'Impact TV'
+                });
+                showToast('✅ Vidéo enregistrée dans la galerie !');
+                return;
+            } catch (err) {
+                if (err.name === 'AbortError') return;
+                console.log('Fallback téléchargement:', err);
+            }
+        }
+        
+        // Fallback : téléchargement classique
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+        showToast('✅ Vidéo téléchargée dans "Téléchargements" !');
+    } catch (e) {
+        window.open(url, '_blank');
+        showToast('Ouverture dans nouvel onglet', true);
+    }
+};
     
     document.getElementById('downloadBtn').onclick = () => {
         window.downloadVideo(currentVideoUrl, currentVideoTitle);
