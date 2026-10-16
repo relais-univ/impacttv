@@ -923,4 +923,462 @@
     </button>
 </nav>
 
-<script>  
+<script>    // ==================== FIREBASE ====================
+    const firebaseConfig = {
+        apiKey: "AIzaSyAetkuLcYgAfdkuwvMjZ11WukfgFHnbulo",
+        authDomain: "faso-opportunites-57088.firebaseapp.com",
+        projectId: "faso-opportunites-57088",
+        storageBucket: "faso-opportunites-57088.firebasestorage.app",
+        messagingSenderId: "489210307173",
+        appId: "1:489210307173:web:1a14ce1e19ff0054331c8c"
+    };
+    
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+    
+    const liveUrlRef = database.ref('direct/liveUrl');
+    const canalRef = database.ref('info/canal');
+    const tntRef = database.ref('info/tnt');
+    const whatsappRef = database.ref('info/whatsapp');
+    const boxCustomRef = database.ref('box/custom');
+    const usersRef = database.ref('impact_users');
+    const postsRef = database.ref('impact_posts');
+    
+    // ==================== VARIABLES ====================
+    let currentLiveUrl = null;
+    let currentVideoUrl = "https://www.w3schools.com/html/mov_bbb.mp4";
+    let currentVideoTitle = "Impact TV - Direct";
+    let liveUrlInitialized = false;
+    
+    let boxCategory = 'karambiri';
+    let boxQuery = '';
+    let boxVideos = [];
+    let boxLoading = false;
+    let boxCustomVideos = [];
+    let boxPage = 1;
+    let boxHasMore = true;
+    
+    let communityUsers = [];
+    let currentUserId = localStorage.getItem('impact_user_id') || null;
+    let editingUserId = null;
+    let postImageData = null;
+    let avatarImageData = null;
+    
+    let deferredInstallPrompt = null;
+    
+    const PIPED_INSTANCES = [
+        'https://pipedapi.kavin.rocks',
+        'https://pipedapi.adminforge.de',
+        'https://api.piped.private.coffee',
+        'https://pipedapi.reallyaweso.me',
+        'https://pipedapi.drgns.space'
+    ];
+    
+    const BOX_CONFIG = {
+        karambiri: { q: 'Pasteur Mamadou Karambiri prédication française' },
+        superbook: { q: 'Superbook français dessin animé bible enfant VF' },
+        films:     { q: 'film biblique français Moïse Abraham David Jésus VF complet' },
+        archives:  { q: 'Pasteur Mamadou Karambiri tournée Inde Bénin États-Unis prédication' },
+        musique:   { q: 'louange adoration chrétienne française cantique bible' }
+    };
+    
+    // ==================== UTILITAIRES ====================
+    function showToast(msg, isError = false) {
+        const toast = document.getElementById('toast');
+        toast.textContent = msg;
+        toast.className = isError ? 'toast error show' : 'toast show';
+        setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+    
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m] || m));
+    }
+    
+    // ==================== BOUTON INSTALLER / PARTAGER ====================
+    function isAppInstalled() {
+        const standalone = window.matchMedia('(display-mode: standalone)').matches 
+            || window.navigator.standalone === true;
+        const previouslyInstalled = localStorage.getItem('impacttv_installed') === 'true';
+        return standalone || previouslyInstalled;
+    }
+    
+    function updateInstallButton() {
+        const btn = document.getElementById('installBtn');
+        if (!btn) return;
+        
+        const icon = btn.querySelector('i');
+        
+        if (isAppInstalled()) {
+            btn.classList.add('installed');
+            btn.title = "Partager l'application avec un ami";
+            if (icon) icon.className = 'fas fa-share-alt';
+        } else {
+            btn.classList.remove('installed');
+            btn.title = "Installer l'application";
+            if (icon) icon.className = 'fas fa-download';
+        }
+    }
+    
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredInstallPrompt = e;
+        console.log('✅ Prompt d\'installation disponible');
+    });
+    
+    window.addEventListener('appinstalled', () => {
+        localStorage.setItem('impacttv_installed', 'true');
+        updateInstallButton();
+        showToast('✅ Application installée avec succès !');
+        deferredInstallPrompt = null;
+    });
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        const installBtn = document.getElementById('installBtn');
+        if (!installBtn) return;
+        
+        installBtn.onclick = async () => {
+            if (isAppInstalled()) {
+                const shareData = {
+                    title: 'Impact TV',
+                    text: '📺 Regardez Impact TV – La Télévision du Royaume des Cieux ! Direct, prédications, films bibliques, communauté. Installez l\'application !',
+                    url: window.location.origin
+                };
+                
+                if (navigator.share) {
+                    try {
+                        await navigator.share(shareData);
+                        showToast('✅ Merci pour le partage !');
+                    } catch (err) {
+                        if (err.name !== 'AbortError') console.log('Erreur partage:', err);
+                    }
+                } else {
+                    try {
+                        await navigator.clipboard.writeText(shareData.text + '\n' + shareData.url);
+                        showToast('📋 Lien copié ! Collez-le où vous voulez');
+                    } catch (e) {
+                        prompt('Copiez ce lien pour partager :', window.location.origin);
+                    }
+                }
+            } else {
+                const userConfirmed = confirm(
+                    '📲 Installer Impact TV sur votre appareil ?\n\n' +
+                    '✓ Accès rapide depuis votre écran d\'accueil\n' +
+                    '✓ Expérience plein écran comme une vraie app\n' +
+                    '✓ Aucun téléchargement lourd'
+                );
+                
+                if (!userConfirmed) return;
+                
+                if (deferredInstallPrompt) {
+                    deferredInstallPrompt.prompt();
+                    const { outcome } = await deferredInstallPrompt.userChoice;
+                    if (outcome === 'accepted') {
+                        localStorage.setItem('impacttv_installed', 'true');
+                        showToast('✅ Installation en cours...');
+                    } else {
+                        showToast('Installation annulée', true);
+                    }
+                    deferredInstallPrompt = null;
+                } else {
+                    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+                    
+                    if (isIOS || isSafari) {
+                        alert('📱 Pour installer Impact TV sur iPhone :\n\n1. Appuyez sur Partager ⬆️ en bas de Safari\n2. Choisissez "Sur l\'écran d\'accueil"\n3. Appuyez sur "Ajouter"');
+                    } else {
+                        alert('📱 Pour installer Impact TV :\n\n• Chrome Android : Menu ⋮ → "Installer l\'application"\n• Chrome PC : Icône ⊕ dans la barre d\'adresse\n• Safari iPhone : Partager ⬆️ → "Sur l\'écran d\'accueil"');
+                    }
+                }
+            }
+        };
+        
+        updateInstallButton();
+    });
+    
+    window.matchMedia('(display-mode: standalone)').addEventListener('change', updateInstallButton);
+    
+    // ==================== NAVIGATION ====================
+    function switchView(view) {
+        document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        
+        const target = document.getElementById('view-' + view);
+        const btn = document.getElementById('nav-' + view);
+        
+        if (target) target.classList.add('active');
+        if (btn) btn.classList.add('active');
+        
+        const titles = {
+            'home': 'IMPACT <span style="color:#ff8c00">TV</span>',
+            'box': '<span style="color:#3b82f6">Box</span> <span style="color:#ff8c00">Impact</span>',
+            'community': '<span style="color:#3b82f6">Communauté</span>',
+            'profile': '<span style="color:#3b82f6">Mon Profil</span>'
+        };
+        document.getElementById('pageTitle').innerHTML = titles[view] || 'IMPACT <span style="color:#ff8c00">TV</span>';
+        
+        if (view === 'box' && boxVideos.length === 0) loadBox(true);
+        if (view === 'community') {
+            loadCommunityUsers();
+            loadPosts();
+            checkPostPermission();
+        }
+        if (view === 'profile') checkUserProfile();
+        
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    
+    function updateOnlineStatus() {
+        const statusDot = document.getElementById('statusIcon');
+        const statusText = document.getElementById('statusText');
+        const banner = document.getElementById('offline-banner');
+        
+        if (navigator.onLine) {
+            statusDot.style.background = '#22c55e';
+            statusText.textContent = 'En ligne';
+            banner.classList.remove('show');
+        } else {
+            statusDot.style.background = '#dc2626';
+            statusText.textContent = 'Hors ligne';
+            banner.classList.add('show');
+        }
+    }
+    
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+    
+    // ==================== LECTEUR ====================
+    function playVideo(url, title) {
+        const video = document.getElementById('mainVideo');
+        video.src = url;
+        video.load();
+        video.play().catch(e => console.log("Lecture bloquée"));
+        currentVideoUrl = url;
+        currentVideoTitle = title;
+        switchView('home');
+        showToast('📺 ' + title);
+    }
+    
+    function playLive() {
+        if (currentLiveUrl) {
+            playVideo(currentLiveUrl, 'Impact TV - Direct');
+        } else {
+            showToast('Aucun direct configuré', true);
+        }
+    }
+    
+    document.getElementById('watchBtn').onclick = () => playLive();
+    
+    // ==================== FIREBASE SYNC ====================
+    liveUrlRef.on('value', (snap) => {
+        const url = snap.val();
+        if (url) {
+            if (liveUrlInitialized && currentLiveUrl !== url) showToast('📡 Direct mis à jour');
+            currentLiveUrl = url;
+            liveUrlInitialized = true;
+        }
+    });
+    
+    canalRef.on('value', (s) => { const v = s.val(); if (v) document.getElementById('canalText').innerText = v; });
+    tntRef.on('value', (s) => { const v = s.val(); if (v) document.getElementById('tntText').innerText = v; });
+    whatsappRef.on('value', (s) => {
+        const v = s.val();
+        if (v) {
+            const formatted = `${v.slice(0,2)} ${v.slice(2,4)} ${v.slice(4,6)} ${v.slice(6,8)}`;
+            const waBtn = document.getElementById('whatsappButton');
+            waBtn.innerHTML = `<i class="fab fa-whatsapp"></i> WhatsApp : ${formatted}`;
+            waBtn.onclick = () => window.open(`https://wa.me/226${v}?text=Bonjour%20Impact%20TV`, '_blank');
+            document.getElementById('whatsappIcon').onclick = () => window.open(`https://wa.me/226${v}?text=Bonjour%20Impact%20TV`, '_blank');
+        }
+    });
+    
+    boxCustomRef.on('value', (snap) => {
+        const data = snap.val();
+        boxCustomVideos = data ? Object.values(data) : [];
+    });
+    
+    // ==================== RECHERCHE ÉMISSIONS ====================
+    document.getElementById('searchInput').oninput = function(e) {
+        const term = e.target.value.toLowerCase();
+        document.querySelectorAll('.replay-card').forEach(card => {
+            const title = card.querySelector('.replay-title').textContent.toLowerCase();
+            card.style.display = title.includes(term) ? '' : 'none';
+        });
+    };
+    
+    // ==================== PARTAGE ====================
+    function openNativeShare(title, text, url) {
+        if (navigator.share) {
+            navigator.share({ title, text, url }).catch(e => console.log);
+        } else {
+            navigator.clipboard.writeText(url).then(() => showToast('📋 Lien copié !'));
+        }
+    }
+    
+    document.getElementById('shareBtn').onclick = () => {
+        openNativeShare(currentVideoTitle, 'Regardez ' + currentVideoTitle + ' sur Impact TV', window.location.href);
+    };
+    
+    window.shareVideo = (title, url) => {
+        openNativeShare(title, 'Regardez "' + title + '" sur Impact TV', url);
+    };
+    
+    // ==================== TÉLÉCHARGEMENT ====================
+    window.downloadVideo = function(url, title) {
+        fetch(url).then(r => r.blob()).then(blob => {
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'Impact_TV_' + title.replace(/[^a-z0-9]/gi, '_') + '.mp4';
+            a.click();
+            URL.revokeObjectURL(a.href);
+            showToast('✅ Téléchargement démarré !');
+        }).catch(() => { window.open(url, '_blank'); showToast('Ouverture dans nouvel onglet'); });
+    };
+    
+    document.getElementById('downloadBtn').onclick = () => {
+        window.downloadVideo(currentVideoUrl, currentVideoTitle);
+    };
+    
+    // ==================== 🆕 TÉLÉCHARGEMENT VIDÉOS BOX ====================
+    async function downloadBoxVideo(id) {
+        const v = boxVideos.find(x => x.id === id);
+        if (!v) return;
+        showToast('⏳ Préparation du téléchargement...');
+        
+        for (const inst of PIPED_INSTANCES) {
+            try {
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 8000);
+                const res = await fetch(`${inst}/streams/${v.videoId}`, { signal: controller.signal });
+                clearTimeout(timeout);
+                if (!res.ok) continue;
+                const data = await res.json();
+                const streams = (data?.videoStreams || [])
+                    .filter(s => s.mimeType && s.mimeType.includes('mp4') && s.videoOnly !== true)
+                    .sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0));
+                if (streams.length === 0) continue;
+                const best = streams.find(s => s.quality === '720p') || streams[0];
+                const a = document.createElement('a');
+                a.href = best.url;
+                a.download = (v.title || 'video').replace(/[^a-z0-9]/gi, '_') + '.mp4';
+                a.target = '_blank';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                showToast('✅ Téléchargement lancé !');
+                saveVideoOffline(v, best.url);
+                return;
+            } catch (e) { continue; }
+        }
+        showToast('⚠️ Téléchargement indisponible pour cette vidéo', true);
+    }
+    
+    function saveVideoOffline(v, url) {
+        try {
+            let off = JSON.parse(localStorage.getItem('impact_offline') || '[]');
+            off = off.filter(o => o.id !== v.id);
+            off.unshift({
+                id: v.id,
+                title: v.title,
+                thumb: v.thumb,
+                videoId: v.videoId,
+                url: url,
+                ts: Date.now()
+            });
+            localStorage.setItem('impact_offline', JSON.stringify(off.slice(0, 100)));
+        } catch (e) {}
+    }
+    
+    function getOfflineVideos() {
+        try { return JSON.parse(localStorage.getItem('impact_offline') || '[]'); }
+        catch (e) { return []; }
+    }
+    
+    function removeOfflineVideo(id) {
+        let off = getOfflineVideos();
+        off = off.filter(o => o.id !== id);
+        localStorage.setItem('impact_offline', JSON.stringify(off));
+        showToast('🗑️ Vidéo supprimée');
+    }
+    
+    function isOfflineVideo(id) {
+        return getOfflineVideos().some(o => o.id === id);
+    }
+    
+    // ==================== PHOTO DE PROFIL ====================
+    async function handleAvatarUpload(event, isView = false) {
+        const file = event.target.files[0];
+        if (!file) return;
+        showToast('📸 Compression en cours...');
+        
+        try {
+            const compressedFile = await imageCompression(file, {
+                maxSizeMB: 0.1, maxWidthOrHeight: 400, useWebWorker: true, initialQuality: 0.85
+            });
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                avatarImageData = ev.target.result;
+                const targetId = isView ? 'userAvatar' : 'registerAvatar';
+                const target = document.getElementById(targetId);
+                target.innerHTML = `<img src="${avatarImageData}" alt="Photo">`;
+                showToast('✅ Photo chargée !');
+            };
+            reader.readAsDataURL(compressedFile);
+        } catch (error) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                avatarImageData = ev.target.result;
+                const targetId = isView ? 'userAvatar' : 'registerAvatar';
+                const target = document.getElementById(targetId);
+                target.innerHTML = `<img src="${avatarImageData}" alt="Photo">`;
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+    
+    // ==================== INSCRIPTION / PROFIL ====================
+    function checkUserProfile() {
+        if (currentUserId) {
+            usersRef.child(currentUserId).once('value').then(snap => {
+                const user = snap.val();
+                if (user) showProfileView(user);
+                else showRegisterView();
+            });
+        } else showRegisterView();
+    }
+    
+    function showRegisterView() {
+        document.getElementById('registerForm').style.display = 'block';
+        document.getElementById('profileView').style.display = 'none';
+    }
+    
+    function showProfileView(user) {
+        document.getElementById('registerForm').style.display = 'none';
+        document.getElementById('profileView').style.display = 'block';
+        
+        const fullName = `${user.prenom || ''} ${user.nom || ''}`.trim();
+        document.getElementById('userFullName').textContent = fullName || 'Utilisateur';
+        document.getElementById('userFiliere').textContent = user.filiere || 'Impact TV';
+        
+        const userAvatar = document.getElementById('userAvatar');
+        if (user.avatar) {
+            userAvatar.innerHTML = `<img src="${user.avatar}" alt="Photo">`;
+            avatarImageData = user.avatar;
+        } else {
+            userAvatar.textContent = (user.prenom || user.nom || 'U').charAt(0).toUpperCase();
+        }
+        
+        let contactsHtml = '';
+        if (user.telephone) contactsHtml += `<a href="https://wa.me/${user.telephone.replace(/\D/g,'')}" target="_blank" class="user-whatsapp"><i class="fab fa-whatsapp"></i> WhatsApp</a>`;
+        if (user.snapchat) contactsHtml += `<a href="https://snapchat.com/add/${user.snapchat}" target="_blank" class="user-snapchat"><i class="fab fa-snapchat"></i> Snapchat</a>`;
+        if (user.instagram) contactsHtml += `<a href="https://instagram.com/${user.instagram}" target="_blank" class="user-instagram"><i class="fab fa-instagram"></i> Instagram</a>`;
+        document.getElementById('userContacts').innerHTML = contactsHtml || '<p class="user-no-contact">Aucun contact renseigné</p>';
+    }
+    
+    function registerUser() {
+        const nom = document.getElementById('regNom').value.trim();
+        const prenom = document.getElementById('regPrenom').value.trim();
+        const filiere = document.getElementById('regFiliere').value.trim();
+        const tel = document.getElementById('regTel').value.trim().replace(/\s/g, '');
+        const snap = document.getElementById('regSnap').value.trim().replace('@', '');
+        const insta = document.getElementById('regInsta').  
