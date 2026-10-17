@@ -900,4 +900,448 @@ function showProfileView(user) {
     document.getElementById('userFullName').textContent = fullName || 'Utilisateur';
     document.getElementById('userFiliere').textContent = user.filiere || 'Impact TV';
     
-    const userAvatar = document.getElementById('userAvatar');
+    const userAvatar = document.getElementById('userAvatar');    if (user.avatar) {
+        userAvatar.innerHTML = `<img src="${user.avatar}" alt="Photo">`;
+        avatarImageData = user.avatar;
+    } else {
+        userAvatar.textContent = (user.prenom || user.nom || 'U').charAt(0).toUpperCase();
+    }
+    
+    let contactsHtml = '';
+    if (user.telephone) contactsHtml += `<a href="https://wa.me/${user.telephone.replace(/\D/g,'')}" target="_blank" class="user-whatsapp"><i class="fab fa-whatsapp"></i> WhatsApp</a>`;
+    if (user.snapchat) contactsHtml += `<a href="https://snapchat.com/add/${user.snapchat}" target="_blank" class="user-snapchat"><i class="fab fa-snapchat"></i> Snapchat</a>`;
+    if (user.instagram) contactsHtml += `<a href="https://instagram.com/${user.instagram}" target="_blank" class="user-instagram"><i class="fab fa-instagram"></i> Instagram</a>`;
+    document.getElementById('userContacts').innerHTML = contactsHtml || '<p class="user-no-contact">Aucun contact renseigné</p>';
+}
+
+function registerUser() {
+    const nom = document.getElementById('regNom').value.trim();
+    const prenom = document.getElementById('regPrenom').value.trim();
+    const filiere = document.getElementById('regFiliere').value.trim();
+    const tel = document.getElementById('regTel').value.trim().replace(/\s/g, '');
+    const snap = document.getElementById('regSnap').value.trim().replace('@', '');
+    const insta = document.getElementById('regInsta').value.trim().replace('@', '');
+    
+    if (!nom) return showToast('⚠️ Nom obligatoire', true);
+    if (!prenom) return showToast('⚠️ Prénom obligatoire', true);
+    if (!filiere) return showToast('⚠️ Ville / Région obligatoire', true);
+    
+    const userData = {
+        nom, prenom, filiere, telephone: tel, snapchat: snap, instagram: insta,
+        avatar: avatarImageData || '',
+        createdAt: firebase.database.ServerValue.TIMESTAMP
+    };
+    
+    if (editingUserId) {
+        usersRef.child(editingUserId).update(userData).then(() => {
+            showToast('✅ Profil modifié !');
+            editingUserId = null;
+            document.getElementById('btnRegisterText').textContent = "S'inscrire";
+            document.getElementById('btnCancelEdit').style.display = 'none';
+            document.getElementById('formTitle').textContent = 'Créer mon profil';
+            checkUserProfile();
+        }).catch(() => showToast('Erreur', true));
+    } else {
+        const newId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+        usersRef.child(newId).set(userData).then(() => {
+            currentUserId = newId;
+            localStorage.setItem('impact_user_id', newId);
+            showToast('✅ Inscription réussie !');
+            checkUserProfile();
+        }).catch(() => showToast('Erreur', true));
+    }
+}
+
+function openEditProfile() {
+    if (!currentUserId) return;
+    usersRef.child(currentUserId).once('value').then(snap => {
+        const user = snap.val();
+        if (!user) return;
+        document.getElementById('regNom').value = user.nom || '';
+        document.getElementById('regPrenom').value = user.prenom || '';
+        document.getElementById('regFiliere').value = user.filiere || '';
+        document.getElementById('regTel').value = user.telephone || '';
+        document.getElementById('regSnap').value = user.snapchat || '';
+        document.getElementById('regInsta').value = user.instagram || '';
+        
+        const regAvatar = document.getElementById('registerAvatar');
+        if (user.avatar) {
+            regAvatar.innerHTML = `<img src="${user.avatar}" alt="Photo">`;
+            avatarImageData = user.avatar;
+        } else {
+            regAvatar.textContent = (user.prenom || user.nom || 'U').charAt(0).toUpperCase();
+            avatarImageData = null;
+        }
+        
+        editingUserId = currentUserId;
+        document.getElementById('btnRegisterText').textContent = 'Mettre à jour';
+        document.getElementById('btnCancelEdit').style.display = 'block';
+        document.getElementById('formTitle').textContent = 'Modifier mon profil';
+        showRegisterView();
+    });
+}
+
+function cancelEdit() {
+    editingUserId = null;
+    avatarImageData = null;
+    document.getElementById('registerAvatar').innerHTML = '👤';
+    document.getElementById('btnRegisterText').textContent = "S'inscrire";
+    document.getElementById('btnCancelEdit').style.display = 'none';
+    document.getElementById('formTitle').textContent = 'Créer mon profil';
+    ['regNom','regPrenom','regFiliere','regTel','regSnap','regInsta'].forEach(id => document.getElementById(id).value = '');
+    checkUserProfile();
+}
+
+function logoutProfile() {
+    if (!confirm('Voulez-vous vraiment vous déconnecter ?')) return;
+    currentUserId = null;
+    localStorage.removeItem('impact_user_id');
+    document.getElementById('profileView').style.display = 'none';
+    showRegisterView();
+    showToast('Déconnecté');
+}
+
+// ==================== COMMUNAUTÉ ====================
+function switchCommunityTab(tab) {
+    document.querySelectorAll('.community-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.community-panel').forEach(p => p.classList.remove('active'));
+    
+    if (tab === 'posts') {
+        document.getElementById('tabPosts').classList.add('active');
+        document.getElementById('panelPosts').classList.add('active');
+        loadPosts();
+        checkPostPermission();
+    } else {
+        document.getElementById('tabFriends').classList.add('active');
+        document.getElementById('panelFriends').classList.add('active');
+        loadCommunityUsers();
+    }
+}
+
+function checkPostPermission() {
+    if (currentUserId) {
+        document.getElementById('notRegisteredMsg').style.display = 'none';
+        document.getElementById('postForm').classList.add('visible');
+    } else {
+        document.getElementById('notRegisteredMsg').style.display = 'block';
+        document.getElementById('postForm').classList.remove('visible');
+    }
+}
+
+async function previewPostImage(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    showToast('📸 Compression de l\'image...');
+    
+    try {
+        const compressedFile = await imageCompression(file, { maxSizeMB: 0.5, maxWidthOrHeight: 1080, useWebWorker: true, initialQuality: 0.8 });
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            postImageData = ev.target.result;
+            const preview = document.getElementById('postImagePreview');
+            preview.src = postImageData;
+            preview.classList.add('visible');
+            showToast('✅ Image prête !');
+        };
+        reader.readAsDataURL(compressedFile);
+    } catch (error) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            postImageData = ev.target.result;
+            const preview = document.getElementById('postImagePreview');
+            preview.src = postImageData;
+            preview.classList.add('visible');
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function publishPost() {
+    if (!currentUserId) return showToast('Inscrivez-vous d\'abord', true);
+    const text = document.getElementById('postText').value.trim();
+    if (!text && !postImageData) return showToast('Écrivez quelque chose', true);
+    
+    usersRef.child(currentUserId).once('value').then(snap => {
+        const user = snap.val();
+        if (!user) return showToast('Profil introuvable', true);
+        const fullName = `${user.prenom || ''} ${user.nom || ''}`.trim();
+        
+        const postData = {
+            userId: currentUserId,
+            authorName: fullName,
+            authorInitial: (user.prenom || user.nom || 'U').charAt(0).toUpperCase(),
+            authorAvatar: user.avatar || '',
+            text: text,
+            image: postImageData || '',
+            createdAt: firebase.database.ServerValue.TIMESTAMP
+        };
+        
+        postsRef.push(postData).then(() => {
+            showToast('✅ Publication partagée !');
+            document.getElementById('postText').value = '';
+            document.getElementById('postImagePreview').classList.remove('visible');
+            postImageData = null;
+            loadPosts();
+        }).catch(() => showToast('Erreur', true));
+    });
+}
+
+function loadPosts() {
+    postsRef.orderByChild('createdAt').limitToLast(50).on('value', (snap) => {
+        const container = document.getElementById('postsList');
+        const posts = [];
+        snap.forEach(child => posts.unshift({ id: child.key, ...child.val() }));
+        
+        if (posts.length === 0) {
+            container.innerHTML = `<div class="empty-community"><div class="big-icon">📝</div><p style="font-weight:700;margin-bottom:5px;">Aucune publication</p><p style="font-size:0.8rem;">Soyez le premier à publier !</p></div>`;
+            return;
+        }
+        
+        container.innerHTML = posts.map(post => {
+            const isMine = post.userId === currentUserId;
+            const time = post.createdAt ? new Date(post.createdAt).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+            const avatarHtml = post.authorAvatar ? `<img src="${post.authorAvatar}" alt="Photo">` : (post.authorInitial || 'U');
+            
+            return `
+                <div class="post-card">
+                    <div class="post-header">
+                        <div class="post-avatar">${avatarHtml}</div>
+                        <div class="post-info">
+                            <h4>${escapeHtml(post.authorName || 'Utilisateur')}</h4>
+                            <p>${time}</p>
+                        </div>
+                        ${isMine ? `<button class="post-delete" onclick="deletePost('${post.id}')"><i class="fas fa-trash"></i></button>` : ''}
+                    </div>
+                    ${post.text ? `<div class="post-text">${escapeHtml(post.text)}</div>` : ''}
+                    ${post.image ? `<img src="${post.image}" class="post-image">` : ''}
+                </div>
+            `;
+        }).join('');
+    });
+}
+
+function deletePost(id) {
+    if (!confirm('Supprimer cette publication ?')) return;
+    postsRef.child(id).remove().then(() => { showToast('Publication supprimée'); loadPosts(); });
+}
+
+function loadCommunityUsers() {
+    usersRef.orderByChild('createdAt').on('value', (snap) => {
+        communityUsers = [];
+        snap.forEach(child => communityUsers.unshift({ id: child.key, ...child.val() }));
+        renderCommunity();
+    });
+}
+
+function renderCommunity() {
+    const container = document.getElementById('communityList');
+    if (communityUsers.length === 0) {
+        container.innerHTML = `<div class="empty-community"><div class="big-icon">👥</div><p style="font-weight:700;margin-bottom:5px;">Aucun membre pour le moment</p><p style="font-size:0.8rem;">Soyez le premier à vous inscrire !</p></div>`;
+        return;
+    }
+    
+    container.innerHTML = communityUsers.map(user => {
+        const fullName = `${user.prenom || ''} ${user.nom || ''}`.trim();
+        const initial = (user.prenom || user.nom || 'U').charAt(0).toUpperCase();
+        const isMe = user.id === currentUserId;
+        const avatarHtml = user.avatar ? `<img src="${user.avatar}" alt="Photo">` : initial;
+        
+        let contactsHtml = '';
+        if (user.telephone) contactsHtml += `<a href="https://wa.me/${user.telephone.replace(/\D/g,'')}" target="_blank" class="user-whatsapp"><i class="fab fa-whatsapp"></i> WhatsApp</a>`;
+        if (user.snapchat) contactsHtml += `<a href="https://snapchat.com/add/${user.snapchat}" target="_blank" class="user-snapchat"><i class="fab fa-snapchat"></i> Snapchat</a>`;
+        if (user.instagram) contactsHtml += `<a href="https://instagram.com/${user.instagram}" target="_blank" class="user-instagram"><i class="fab fa-instagram"></i> Instagram</a>`;
+        
+        return `
+            <div class="user-card" data-name="${fullName.toLowerCase()}">
+                <div class="user-header">
+                    <div class="user-avatar">${avatarHtml}</div>
+                    <div class="user-info">
+                        <h4>${escapeHtml(fullName)}${isMe ? ' <span style="font-size:0.65rem;color:#d4a017;">(moi)</span>' : ''}</h4>
+                        <p>📍 ${escapeHtml(user.filiere || 'Impact TV')}</p>
+                    </div>
+                </div>
+                ${contactsHtml ? `<div class="user-contacts">${contactsHtml}</div>` : '<p class="user-no-contact">Aucun contact renseigné</p>'}
+            </div>
+        `;
+    }).join('');
+}
+
+function filterCommunity() {
+    const query = document.getElementById('searchCommunity').value.toLowerCase().trim();
+    document.querySelectorAll('.user-card').forEach(card => {
+        const name = card.getAttribute('data-name') || '';
+        card.style.display = name.includes(query) ? '' : 'none';
+    });
+}
+
+// ==================== BOX ====================
+async function loadBox(reset = false) {
+    if (boxLoading) return;
+    boxLoading = true;
+    
+    if (reset) {
+        boxVideos = []; boxPage = 1; boxHasMore = true;
+        document.getElementById('boxGrid').innerHTML = '';
+        document.getElementById('boxEnd').style.display = 'none';
+    }
+    
+    if (!boxHasMore) { boxLoading = false; return; }
+    
+    const loader = document.getElementById('boxLoader');
+    loader.style.display = 'block';
+    loader.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Chargement...';
+    
+    try {
+        let items = [];
+        if (boxPage === 1) {
+            const customForCat = boxCustomVideos.filter(v => v.category === boxCategory);
+            items = items.concat(customForCat.map(v => ({
+                id: 'c_' + v.id, title: v.title, author: v.author || 'Impact TV',
+                thumb: v.thumb || `https://i.ytimg.com/vi/${v.videoId}/hqdefault.jpg`,
+                type: 'youtube', videoId: v.videoId, duration: v.duration || 0
+            })));
+        }
+        
+        const query = boxQuery || (BOX_CONFIG[boxCategory] ? BOX_CONFIG[boxCategory].q : '');
+        const ytItems = await searchYouTube(query, boxPage);
+        items = items.concat(ytItems);
+        
+        if (items.length === 0) {
+            boxHasMore = false;
+            loader.style.display = 'none';
+            document.getElementById('boxEnd').style.display = 'block';
+            boxLoading = false;
+            return;
+        }
+        
+        boxVideos = boxVideos.concat(items);
+        renderBox();
+        loader.style.display = 'none';
+        
+        if (ytItems.length < 15) {
+            boxHasMore = false;
+            document.getElementById('boxEnd').style.display = 'block';
+        }
+    } catch (e) {
+        console.error(e);
+        loader.innerHTML = '<p style="color:#e74c3c;">Erreur de chargement.</p>';
+    }
+    boxLoading = false;
+}
+
+window.addEventListener('scroll', () => {
+    const boxView = document.getElementById('view-box');
+    if (!boxView.classList.contains('active')) return;
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    const scrollHeight = document.documentElement.scrollHeight;
+    const clientHeight = document.documentElement.clientHeight;
+    if (scrollTop + clientHeight >= scrollHeight - 500) {
+        if (!boxLoading && boxHasMore) { boxPage++; loadBox(false); }
+    }
+});
+
+async function searchYouTube(query, page = 1) {
+    for (const inst of PIPED_INSTANCES) {
+        try {
+            const searchQuery = page > 1 ? `${query} partie ${page}` : query;
+            const url = `${inst}/search?q=${encodeURIComponent(searchQuery)}&filter=videos`;
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 7000);
+            const res = await fetch(url, { signal: controller.signal });
+            clearTimeout(timeout);
+            if (!res.ok) continue;
+            const data = await res.json();
+            const items = (data?.items || []).filter(i => i.type === 'stream' && i.url);
+            if (items.length === 0) continue;
+            
+            return items.slice(0, 20).map(v => {
+                const vid = (v.url || '').split('v=')[1]?.split('&')[0] || '';
+                return {
+                    id: 'y_' + vid + '_' + page,
+                    title: v.title || 'Sans titre',
+                    author: v.uploaderName || '',
+                    thumb: `https://i.ytimg.com/vi/${vid}/hqdefault.jpg`,
+                    duration: v.duration || 0,
+                    type: 'youtube',
+                    videoId: vid
+                };
+            }).filter(v => v.videoId);
+        } catch (e) { continue; }
+    }
+    return [];
+}
+
+function renderBox() {
+    const grid = document.getElementById('boxGrid');
+    grid.innerHTML = boxVideos.map(v => {
+        let durationBadge = '';
+        if (v.duration && v.duration > 0) {
+            const h = Math.floor(v.duration / 3600);
+            const m = Math.floor((v.duration % 3600) / 60);
+            const s = v.duration % 60;
+            const dur = h > 0 
+                ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+                : `${m}:${String(s).padStart(2,'0')}`;
+            durationBadge = `<span class="box-duration">${dur}</span>`;
+        }
+        
+        return `
+            <div class="box-card">
+                <div class="box-thumb" onclick="openBoxVideo('${v.id}')">
+                    <img src="${v.thumb}" loading="lazy" onerror="this.onerror=null; this.src='https://i.ytimg.com/vi/${v.videoId}/mqdefault.jpg';">
+                    <div class="box-play-icon"><i class="fas fa-play"></i></div>
+                    ${durationBadge}
+                </div>
+                <div class="box-info">
+                    <div class="box-title">${escapeHtml(v.title)}</div>
+                    ${v.author ? `<div class="box-author">${escapeHtml(v.author)}</div>` : ''}
+                    <button onclick="event.stopPropagation(); downloadBoxVideo('${v.id}')" 
+                            style="margin-top:8px;width:100%;background:rgba(46,204,113,0.15);color:#2ecc71;border:none;padding:7px;border-radius:8px;font-size:0.65rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;">
+                        <i class="fas fa-download"></i> Télécharger
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function setBoxCategory(cat) {
+    hideOffline();
+    boxCategory = cat; boxQuery = ''; boxPage = 1; boxHasMore = true;
+    document.getElementById('boxSearch').value = '';
+    document.getElementById('boxEnd').style.display = 'none';
+    document.querySelectorAll('.box-cat').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
+    loadBox(true);
+}
+
+function doBoxSearch() {
+    hideOffline();
+    const q = document.getElementById('boxSearch').value.trim();
+    if (!q) return loadBox(true);
+    boxQuery = q; boxPage = 1; boxHasMore = true;
+    document.getElementById('boxEnd').style.display = 'none';
+    document.querySelectorAll('.box-cat').forEach(b => b.classList.remove('active'));
+    loadBox(true);
+}
+
+document.getElementById('boxSearch').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') doBoxSearch();
+});
+
+function openBoxVideo(id) {
+    const v = boxVideos.find(x => x.id === id);
+    if (!v) return;
+    currentModalVideo = v;
+    document.getElementById('boxModalTitle').textContent = v.title;
+    document.getElementById('boxModalBody').innerHTML = `<iframe src="https://www.youtube.com/embed/${v.videoId}?autoplay=1&rel=0" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>`;
+    document.getElementById('boxModal').classList.add('open');
+}
+
+function closeBoxModal() {
+    document.getElementById('boxModal').classList.remove('open');
+    document.getElementById('boxModalBody').innerHTML = '';
+    currentModalVideo = null;
+}
+
+// ==================== BIBLE LOUIS SEGOND ====================
+
