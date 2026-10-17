@@ -320,10 +320,9 @@
         </div>
         
         <div class="box-cats" id="boxCats">
-            <button class="box-cat active" data-cat="karambiri" onclick="setBoxCategory('karambiri')">🎤 Karambiri</button>
+            <button class="box-cat active" data-cat="karambiri" onclick="setBoxCategory('karambiri')">🎤 papa  Karambiri</button>
             <button class="box-cat" data-cat="superbook" onclick="setBoxCategory('superbook')">📺 Superbook</button>
             <button class="box-cat" data-cat="films" onclick="setBoxCategory('films')">🎬 Films</button>
-            <button class="box-cat" data-cat="archives" onclick="setBoxCategory('archives')">📚 Archives</button>
             <button class="box-cat" data-cat="musique" onclick="setBoxCategory('musique')">🎵 Louange</button>
             <button class="box-cat" data-cat="offline" onclick="showOffline()">⬇️ Hors ligne</button>
         </div>
@@ -535,7 +534,6 @@ const BOX_CONFIG = {
     karambiri: { q: 'Pasteur Mamadou Karambiri prédication française' },
     superbook: { q: 'Superbook français dessin animé bible enfant VF' },
     films:     { q: 'film biblique français Moïse Abraham David Jésus VF complet' },
-    archives:  { q: 'Pasteur Mamadou Karambiri tournée Inde Bénin États-Unis prédication' },
     musique:   { q: 'louange adoration chrétienne française cantique bible' }
 };
 
@@ -1344,4 +1342,151 @@ function closeBoxModal() {
 }
 
 // ==================== BIBLE LOUIS SEGOND ====================
-
+    const BIBLE_BOOKS = {
+        'genese':'genesis','genèse':'genesis','gen':'genesis',
+        'exode':'exodus','exo':'exodus',
+        'levitique':'leviticus','lévitique':'leviticus',
+        'nombres':'numbers','nom':'numbers',
+        'deuteronome':'deuteronomy','deutéronome':'deuteronomy',
+        'josue':'joshua','josué':'joshua','juges':'judges','ruth':'ruth',
+        '1samuel':'1 samuel','2samuel':'2 samuel',
+        '1rois':'1 kings','1roi':'1 kings','1 roi':'1 kings','1r':'1 kings',
+        '2rois':'2 kings','2roi':'2 kings','2 roi':'2 kings',
+        '1chroniques':'1 chronicles','2chroniques':'2 chronicles',
+        'esdras':'ezra','nehemie':'nehemiah','néhémie':'nehemiah',
+        'esther':'esther','job':'job',
+        'psaume':'psalms','psaumes':'psalms','ps':'psalms',
+        'proverbes':'proverbs','prov':'proverbs',
+        'ecclesiaste':'ecclesiastes','ecclésiaste':'ecclesiastes',
+        'cantique':'song of solomon','cantiques':'song of solomon',
+        'esaie':'isaiah','ésaïe':'isaiah','isaie':'isaiah',
+        'jeremie':'jeremiah','jérémie':'jeremiah','lamentations':'lamentations',
+        'ezechiel':'ezekiel','ézéchiel':'ezekiel','daniel':'daniel','dan':'daniel',
+        'osee':'hosea','osée':'hosea','joel':'joel','amos':'amos',
+        'abdias':'obadiah','jonas':'jonah',
+        'michee':'micah','michée':'micah','nahum':'nahum','habacuc':'habakkuk',
+        'sophonie':'zephaniah','aggee':'haggai','aggée':'haggai',
+        'zacharie':'zechariah','malachie':'malachi',
+        'matthieu':'matthew','matt':'matthew','mat':'matthew','mt':'matthew',
+        'marc':'mark','mc':'mark','luc':'luke','lc':'luke',
+        'jean':'john','jn':'john','actes':'acts','act':'acts',
+        'romains':'romans','rom':'romans',
+        '1corinthiens':'1 corinthians','2corinthiens':'2 corinthians',
+        'galates':'galatians','gal':'galatians',
+        'ephesiens':'ephesians','éphésiens':'ephesians',
+        'philippiens':'philippians','colossiens':'colossians',
+        '1thessaloniciens':'1 thessalonians','2thessaloniciens':'2 thessalonians',
+        '1timothee':'1 timothy','1timothée':'1 timothy',
+        '2timothee':'2 timothy','2timothée':'2 timothy',
+        'tite':'titus','philemon':'philemon','philémon':'philemon',
+        'hebreux':'hebrews','hébreux':'hebrews','jacques':'james','jac':'james',
+        '1pierre':'1 peter','2pierre':'2 peter',
+        '1jean':'1 john','2jean':'2 john','3jean':'3 john','jude':'jude',
+        'apocalypse':'revelation','apoc':'revelation'
+    };
+    
+    function normalizeBibleReference(input) {
+        let ref = input.trim().toLowerCase();
+        ref = ref.replace(/\.(\d)/g, ':$1');
+        const match = ref.match(/^(\d?\s*[a-zéèêëàâäîïôöûüç\s]+?)\s*(\d+)(?::(\d+))?$/i);
+        if (!match) return ref;
+        
+        let bookName = match[1].toLowerCase().replace(/\s+/g, '');
+        const chapter = match[2];
+        const verse = match[3];
+        
+        let englishBook = BIBLE_BOOKS[bookName];
+        if (!englishBook) {
+            for (const [fr, en] of Object.entries(BIBLE_BOOKS)) {
+                if (bookName.startsWith(fr) || fr.startsWith(bookName)) {
+                    englishBook = en; break;
+                }
+            }
+        }
+        if (!englishBook) englishBook = bookName;
+        return verse ? `${englishBook} ${chapter}:${verse}` : `${englishBook} ${chapter}`;
+    }
+    
+    async function fetchBibleVerse(reference) {
+        try {
+            const normalizedRef = normalizeBibleReference(reference);
+            const url = `https://bible-api.com/${encodeURIComponent(normalizedRef)}?translation=lsg`;
+            const response = await fetch(url);
+            const data = await response.json();
+            if (data.error || !data.text) return null;
+            return { text: data.text.trim(), reference: data.reference };
+        } catch (error) { return null; }
+    }
+    
+    document.getElementById('askIaBtn').onclick = async () => {
+        const reference = document.getElementById('iaQuestion').value.trim();
+        if (!reference) return showToast('📝 Entrez une référence biblique');
+        
+        const btn = document.getElementById('askIaBtn');
+        const responseDiv = document.getElementById('iaResponse');
+        
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        responseDiv.style.display = 'block';
+        responseDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Recherche...';
+        
+        const verse = await fetchBibleVerse(reference);
+        
+        if (verse) {
+            responseDiv.innerHTML = `
+                <strong style="color: #1a1a2e; font-size: 1rem;">📖 ${verse.reference}</strong><br><br>
+                <span style="font-size: 0.9rem; line-height: 1.7; color: #374151;">${verse.text.replace(/\n/g, '<br>')}</span>
+            `;
+            showToast('✅ Verset trouvé !');
+        } else {
+            responseDiv.innerHTML = `
+                <strong style="color: #e74c3c;">⚠️ Verset non trouvé</strong><br>
+                <span style="font-size: 0.8rem; color: #6b7280;">
+                    Ex: <b>Genèse 1:1</b> · <b>Jean 3:16</b> · <b>Psaume 23</b>
+                </span>
+            `;
+            showToast('Verset non trouvé', true);
+        }
+        
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-search"></i> Ouvrir';
+        document.getElementById('iaQuestion').value = '';
+    };
+    
+    document.getElementById('iaQuestion').onkeypress = (e) => {
+        if (e.key === 'Enter') document.getElementById('askIaBtn').click();
+    };
+    
+    // ==================== INITIALISATION ====================
+    window.addEventListener('load', () => {
+        updateOnlineStatus();
+        checkUserProfile();
+    });
+    
+    window.switchView = switchView;
+    window.playVideo = playVideo;
+    window.shareVideo = shareVideo;
+    window.downloadVideo = downloadVideo;
+    window.downloadBoxVideo = downloadBoxVideo;
+    window.setBoxCategory = setBoxCategory;
+    window.doBoxSearch = doBoxSearch;
+    window.openBoxVideo = openBoxVideo;
+    window.closeBoxModal = closeBoxModal;
+    window.registerUser = registerUser;
+    window.openEditProfile = openEditProfile;
+    window.cancelEdit = cancelEdit;
+    window.logoutProfile = logoutProfile;
+    window.filterCommunity = filterCommunity;
+    window.switchCommunityTab = switchCommunityTab;
+    window.previewPostImage = previewPostImage;
+    window.publishPost = publishPost;
+    window.deletePost = deletePost;
+    window.handleAvatarUpload = handleAvatarUpload;
+    window.renderOfflineList = renderOfflineList;
+    window.playOffline = playOffline;
+    window.removeOffline = removeOffline;
+    window.showOffline = showOffline;
+    window.hideOffline = hideOffline;
+</script>
+</body>
+</html>
