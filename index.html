@@ -481,4 +481,423 @@
     <button class="nav-btn" id="nav-profile" onclick="switchView('profile')"><i class="fas fa-user-circle"></i><span>Profil</span></button>
 </nav>
 
-<script>
+<script>const firebaseConfig = {
+    apiKey: "AIzaSyAetkuLcYgAfdkuwvMjZ11WukfgFHnbulo",
+    authDomain: "faso-opportunites-57088.firebaseapp.com",
+    projectId: "faso-opportunites-57088",
+    storageBucket: "faso-opportunites-57088.firebasestorage.app",
+    messagingSenderId: "489210307173",
+    appId: "1:489210307173:web:1a14ce1e19ff0054331c8c"
+};
+
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+
+const liveUrlRef = database.ref('direct/liveUrl');
+const canalRef = database.ref('info/canal');
+const tntRef = database.ref('info/tnt');
+const whatsappRef = database.ref('info/whatsapp');
+const boxCustomRef = database.ref('box/custom');
+const usersRef = database.ref('impact_users');
+const postsRef = database.ref('impact_posts');
+
+let currentLiveUrl = null;
+let currentVideoUrl = "https://www.w3schools.com/html/mov_bbb.mp4";
+let currentVideoTitle = "Impact TV - Direct";
+let liveUrlInitialized = false;
+
+let boxCategory = 'karambiri';
+let boxQuery = '';
+let boxVideos = [];
+let boxLoading = false;
+let boxCustomVideos = [];
+let boxPage = 1;
+let boxHasMore = true;
+let currentModalVideo = null;
+
+let communityUsers = [];
+let currentUserId = localStorage.getItem('impact_user_id') || null;
+let editingUserId = null;
+let postImageData = null;
+let avatarImageData = null;
+
+let deferredInstallPrompt = null;
+
+const PIPED_INSTANCES = [
+    'https://pipedapi.kavin.rocks',
+    'https://pipedapi.adminforge.de',
+    'https://api.piped.private.coffee',
+    'https://pipedapi.reallyaweso.me',
+    'https://pipedapi.drgns.space'
+];
+
+const BOX_CONFIG = {
+    karambiri: { q: 'Pasteur Mamadou Karambiri prédication française' },
+    superbook: { q: 'Superbook français dessin animé bible enfant VF' },
+    films:     { q: 'film biblique français Moïse Abraham David Jésus VF complet' },
+    archives:  { q: 'Pasteur Mamadou Karambiri tournée Inde Bénin États-Unis prédication' },
+    musique:   { q: 'louange adoration chrétienne française cantique bible' }
+};
+
+function showToast(msg, isError = false) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.className = isError ? 'toast error show' : 'toast show';
+    setTimeout(() => toast.classList.remove('show'), 3500);
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m] || m));
+}
+
+// ==================== BOUTONS INSTALLER & PARTAGER ====================
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+});
+
+document.getElementById('installBtn').addEventListener('click', async () => {
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    
+    if (isStandalone) {
+        alert("✅ L'application est déjà installée sur votre appareil !\n\nSi vous ne voyez pas l'icône sur votre écran d'accueil :\n1. Faites glisser votre doigt vers le haut pour ouvrir le tiroir d'applications.\n2. Maintenez le doigt sur l'icône Impact TV.\n3. Choisissez 'Ajouter à l'écran d'accueil'.");
+        return;
+    }
+    
+    if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        const { outcome } = await deferredInstallPrompt.userChoice;
+        if (outcome === 'accepted') {
+            showToast('✅ Installation en cours... Vérifiez votre tiroir d\'applications.');
+        }
+        deferredInstallPrompt = null;
+    } else {
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        alert(isIOS ? '📱 Sur iPhone : Partager ⬆️ -> Sur l\'écran d\'accueil' : '📱 Sur Android : Menu ⋮ -> Installer l\'application');
+    }
+});
+
+document.getElementById('shareAppBtn').addEventListener('click', async () => {
+    const shareData = {
+        title: 'Impact TV',
+        text: '📺 Regardez Impact TV – La Télévision du Royaume des Cieux !',
+        url: window.location.origin
+    };
+    if (navigator.share) {
+        try { await navigator.share(shareData); } catch (err) {}
+    } else {
+        try {
+            await navigator.clipboard.writeText(shareData.text + '\n' + shareData.url);
+            showToast('📋 Lien copié !');
+        } catch (e) { prompt('Copiez ce lien :', window.location.origin); }
+    }
+});
+
+// ==================== NAVIGATION ====================
+function switchView(view) {
+    document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    
+    const target = document.getElementById('view-' + view);
+    const btn = document.getElementById('nav-' + view);
+    
+    if (target) target.classList.add('active');
+    if (btn) btn.classList.add('active');
+    
+    const titles = {
+        'home': 'IMPACT <span style="color:#ff8c00">TV</span>',
+        'box': '<span style="color:#3b82f6">Box</span> <span style="color:#ff8c00">Impact</span>',
+        'community': '<span style="color:#3b82f6">Communauté</span>',
+        'profile': '<span style="color:#3b82f6">Mon Profil</span>'
+    };
+    document.getElementById('pageTitle').innerHTML = titles[view] || 'IMPACT <span style="color:#ff8c00">TV</span>';
+    
+    if (view === 'box' && boxVideos.length === 0) loadBox(true);
+    if (view === 'community') {
+        loadCommunityUsers();
+        loadPosts();
+        checkPostPermission();
+    }
+    if (view === 'profile') checkUserProfile();
+    
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function updateOnlineStatus() {
+    const statusDot = document.getElementById('statusIcon');
+    const statusText = document.getElementById('statusText');
+    const banner = document.getElementById('offline-banner');
+    
+    if (navigator.onLine) {
+        statusDot.style.background = '#22c55e';
+        statusText.textContent = 'En ligne';
+        banner.classList.remove('show');
+    } else {
+        statusDot.style.background = '#dc2626';
+        statusText.textContent = 'Hors ligne';
+        banner.classList.add('show');
+    }
+}
+
+window.addEventListener('online', updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+
+// ==================== LECTEUR ====================
+function playVideo(url, title) {
+    const video = document.getElementById('mainVideo');
+    video.src = url;
+    video.load();
+    video.play().catch(e => console.log("Lecture bloquée"));
+    currentVideoUrl = url;
+    currentVideoTitle = title;
+    switchView('home');
+    showToast('📺 ' + title);
+}
+
+function playLive() {
+    if (currentLiveUrl) { playVideo(currentLiveUrl, 'Impact TV - Direct'); } 
+    else { showToast('Aucun direct configuré', true); }
+}
+
+document.getElementById('watchBtn').onclick = () => playLive();
+
+// ==================== FIREBASE SYNC ====================
+liveUrlRef.on('value', (snap) => {
+    const url = snap.val();
+    if (url) {
+        if (liveUrlInitialized && currentLiveUrl !== url) showToast('📡 Direct mis à jour');
+        currentLiveUrl = url;
+        liveUrlInitialized = true;
+    }
+});
+
+canalRef.on('value', (s) => { const v = s.val(); if (v) document.getElementById('canalText').innerText = v; });
+tntRef.on('value', (s) => { const v = s.val(); if (v) document.getElementById('tntText').innerText = v; });
+whatsappRef.on('value', (s) => {
+    const v = s.val();
+    if (v) {
+        const formatted = `${v.slice(0,2)} ${v.slice(2,4)} ${v.slice(4,6)} ${v.slice(6,8)}`;
+        const waBtn = document.getElementById('whatsappButton');
+        waBtn.innerHTML = `<i class="fab fa-whatsapp"></i> WhatsApp : ${formatted}`;
+        waBtn.onclick = () => window.open(`https://wa.me/226${v}?text=Bonjour%20Impact%20TV`, '_blank');
+        document.getElementById('whatsappIcon').onclick = () => window.open(`https://wa.me/226${v}?text=Bonjour%20Impact%20TV`, '_blank');
+    }
+});
+
+boxCustomRef.on('value', (snap) => {
+    const data = snap.val();
+    boxCustomVideos = data ? Object.values(data) : [];
+});
+
+// ==================== RECHERCHE ÉMISSIONS ====================
+document.getElementById('searchInput').oninput = function(e) {
+    const term = e.target.value.toLowerCase();
+    document.querySelectorAll('.replay-card').forEach(card => {
+        const title = card.querySelector('.replay-title').textContent.toLowerCase();
+        card.style.display = title.includes(term) ? '' : 'none';
+    });
+};
+
+// ==================== PARTAGE ====================
+function openNativeShare(title, text, url) {
+    if (navigator.share) {
+        navigator.share({ title, text, url }).catch(e => console.log);
+    } else {
+        navigator.clipboard.writeText(url).then(() => showToast('📋 Lien copié !'));
+    }
+}
+
+document.getElementById('shareBtn').onclick = () => {
+    openNativeShare(currentVideoTitle, 'Regardez ' + currentVideoTitle + ' sur Impact TV', window.location.href);
+};
+
+window.shareVideo = (title, url) => {
+    openNativeShare(title, 'Regardez "' + title + '" sur Impact TV', url);
+};
+
+// ==================== TÉLÉCHARGEMENT DIRECT ====================
+window.downloadVideo = function(url, title) {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Impact_TV_' + title.replace(/[^a-z0-9]/gi, '_') + '.mp4';
+    a.target = '_blank';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast('✅ Téléchargement dans le dossier "Téléchargements" !');
+};
+
+document.getElementById('downloadBtn').onclick = () => {
+    window.downloadVideo(currentVideoUrl, currentVideoTitle);
+};
+
+// ==================== TÉLÉCHARGEMENT BOX AVEC SAUVEGARDE HORS LIGNE ====================
+async function downloadBoxVideo(id) {
+    const v = boxVideos.find(x => x.id === id);
+    if (!v) return;
+    showToast('⏳ Préparation du téléchargement réel...');
+    
+    for (const inst of PIPED_INSTANCES) {
+        try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 10000);
+            const res = await fetch(`${inst}/streams/${v.videoId}`, { signal: controller.signal });
+            clearTimeout(timeout);
+            if (!res.ok) continue;
+            const data = await res.json();
+            const streams = (data?.videoStreams || [])
+                .filter(s => s.mimeType && s.mimeType.includes('mp4') && s.videoOnly !== true)
+                .sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0));
+            if (streams.length === 0) continue;
+            
+            const best = streams.find(s => s.quality === '720p') || streams[0];
+            
+            // Téléchargement physique
+            const a = document.createElement('a');
+            a.href = best.url;
+            a.download = (v.title || 'video').replace(/[^a-z0-9]/gi, '_') + '.mp4';
+            a.target = '_blank';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            // Sauvegarde locale pour l'onglet "Hors ligne"
+            saveToOffline(v, best.url);
+            
+            showToast('✅ Vidéo téléchargée ! Retrouvez-la dans l\'onglet Hors ligne.');
+            return;
+        } catch (e) { continue; }
+    }
+    showToast('⚠️ Téléchargement indisponible pour le moment', true);
+}
+
+document.getElementById('modalDownloadBtn').onclick = () => {
+    if (currentModalVideo) downloadBoxVideo(currentModalVideo.id);
+};
+
+// ==================== GESTION HORS LIGNE ====================
+function saveToOffline(v, url) {
+    try {
+        let off = JSON.parse(localStorage.getItem('impact_offline') || '[]');
+        off = off.filter(o => o.id !== v.id);
+        off.unshift({ id: v.id, title: v.title, thumb: v.thumb, videoId: v.videoId, url: url, ts: Date.now() });
+        off = off.slice(0, 100);
+        localStorage.setItem('impact_offline', JSON.stringify(off));
+    } catch (e) {}
+}
+
+function getOfflineVideos() {
+    return JSON.parse(localStorage.getItem('impact_offline') || '[]');
+}
+
+function renderOfflineList() {
+    const el = document.getElementById('offlineList');
+    if (!el) return;
+    const off = getOfflineVideos();
+    if (off.length === 0) {
+        el.innerHTML = `<p style="text-align:center; color:#9ca3af; font-size:0.8rem; padding:20px;">Aucune vidéo hors ligne pour l'instant.</p>`;
+        return;
+    }
+    el.innerHTML = off.map(o => `
+        <div style="display:flex; align-items:center; gap:10px; background:white; padding:10px; border-radius:12px; border:1px solid #f3f4f6;">
+            <img src="${o.thumb}" style="width:60px; height:45px; object-fit:cover; border-radius:6px;">
+            <div style="flex:1; min-width:0;">
+                <h4 style="font-size:0.75rem; font-weight:700; color:#1a1a2e; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(o.title)}</h4>
+                <p style="font-size:0.65rem; color:#9ca3af; margin-top:2px;">Téléchargée le ${new Date(o.ts).toLocaleDateString('fr-FR')}</p>
+            </div>
+            <button onclick="playOffline('${o.id}')" style="background:#2ecc71; color:white; border:none; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"><i class="fas fa-play"></i></button>
+            <button onclick="removeOffline('${o.id}')" style="background:none; border:none; color:#dc2626; cursor:pointer; padding:5px;"><i class="fas fa-trash"></i></button>
+        </div>
+    `).join('');
+}
+
+function playOffline(id) {
+    const off = getOfflineVideos();
+    const o = off.find(x => x.id === id);
+    if (!o) return;
+    if (o.url) {
+        window.open(o.url, '_blank');
+    } else {
+        showToast("⚠️ Lien indisponible", true);
+    }
+}
+
+function removeOffline(id) {
+    let off = getOfflineVideos();
+    off = off.filter(o => o.id !== id);
+    localStorage.setItem('impact_offline', JSON.stringify(off));
+    renderOfflineList();
+    showToast('🗑️ Vidéo retirée');
+}
+
+function showOffline() {
+    document.getElementById('boxCats').style.display = 'none';
+    document.getElementById('boxGrid').style.display = 'none';
+    document.getElementById('boxLoader').style.display = 'none';
+    document.getElementById('boxEnd').style.display = 'none';
+    const panel = document.getElementById('offlinePanel');
+    panel.style.display = 'block';
+    panel.classList.remove('hidden');
+    renderOfflineList();
+}
+
+function hideOffline() {
+    document.getElementById('boxCats').style.display = 'flex';
+    document.getElementById('boxGrid').style.display = 'grid';
+    document.getElementById('offlinePanel').style.display = 'none';
+    document.getElementById('offlinePanel').classList.add('hidden');
+}
+
+// ==================== PHOTO DE PROFIL ====================
+async function handleAvatarUpload(event, isView = false) {
+    const file = event.target.files[0];
+    if (!file) return;
+    showToast('📸 Compression en cours...');
+    
+    try {
+        const compressedFile = await imageCompression(file, { maxSizeMB: 0.1, maxWidthOrHeight: 400, useWebWorker: true, initialQuality: 0.85 });
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            avatarImageData = ev.target.result;
+            const targetId = isView ? 'userAvatar' : 'registerAvatar';
+            document.getElementById(targetId).innerHTML = `<img src="${avatarImageData}" alt="Photo">`;
+            showToast('✅ Photo chargée !');
+        };
+        reader.readAsDataURL(compressedFile);
+    } catch (error) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            avatarImageData = ev.target.result;
+            const targetId = isView ? 'userAvatar' : 'registerAvatar';
+            document.getElementById(targetId).innerHTML = `<img src="${avatarImageData}" alt="Photo">`;
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+// ==================== INSCRIPTION / PROFIL ====================
+function checkUserProfile() {
+    if (currentUserId) {
+        usersRef.child(currentUserId).once('value').then(snap => {
+            const user = snap.val();
+            if (user) showProfileView(user);
+            else showRegisterView();
+        });
+    } else showRegisterView();
+}
+
+function showRegisterView() {
+    document.getElementById('registerForm').style.display = 'block';
+    document.getElementById('profileView').style.display = 'none';
+}
+
+function showProfileView(user) {
+    document.getElementById('registerForm').style.display = 'none';
+    document.getElementById('profileView').style.display = 'block';
+    
+    const fullName = `${user.prenom || ''} ${user.nom || ''}`.trim();
+    document.getElementById('userFullName').textContent = fullName || 'Utilisateur';
+    document.getElementById('userFiliere').textContent = user.filiere || 'Impact TV';
+    
+    const userAvatar = document.getElementById('userAvatar');
