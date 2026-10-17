@@ -198,4 +198,287 @@
         .form-group .with-icon input { padding-left: 42px; }
         .form-section-title { text-align: left; font-size: 0.7rem; font-weight: 800; color: #6b7280; text-transform: uppercase; letter-spacing: 1px; margin: 20px 0 12px; padding-top: 15px; border-top: 1px solid #f3f4f6; }
         
-        .profile-save-btn { width: 100%; padding: 15px; background: linear-gradient(135deg, #ffd700, #ffb347); border: none; border-radius: 40px; color: #1a1a2e; font-weight: 900; font-size: 1rem; cursor: pointer; 
+        .profile-save-btn { width: 100%; padding: 15px; background: linear-gradient(135deg, #ffd700, #ffb347); border: none; border-radius: 40px; color: #1a1a2e; font-weight: 900; font-size: 1rem; cursor: pointer; margin-top: 15px; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; }
+        .profile-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+        .btn-outline { width: 100%; padding: 12px; background: white; border: 2px solid #e5e7eb; border-radius: 40px; color: #6b7280; font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: 0.2s; }
+        .btn-outline:hover { border-color: #ffd700; color: #1a1a2e; }
+        .btn-outline.danger { color: #dc2626; border-color: rgba(220,38,38,0.3); }
+        
+        .bottom-nav { position: fixed !important; bottom: 0 !important; left: 0 !important; right: 0 !important; top: auto !important; width: 100%; background: white; display: flex; justify-content: space-around; padding: 8px 0; padding-bottom: calc(8px + env(safe-area-inset-bottom)); box-shadow: 0 -4px 20px rgba(0,0,0,0.08); z-index: 99999 !important; border-top: 1px solid rgba(255,215,0,0.2); transform: translateZ(0); will-change: transform; }
+        .nav-btn { flex: 1; background: none; border: none; display: flex; flex-direction: column; align-items: center; padding: 6px 0; cursor: pointer; color: #9ca3af; font-size: 0.65rem; font-weight: 700; transition: 0.2s; position: relative; }
+        .nav-btn i { font-size: 1.3rem; margin-bottom: 3px; }
+        .nav-btn.active { color: #d4a017; }
+        .nav-btn.active::before { content: ''; position: absolute; top: -8px; left: 50%; transform: translateX(-50%); width: 30px; height: 3px; background: #ffd700; border-radius: 2px; }
+        
+        .box-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 99999; display: none; flex-direction: column; }
+        .box-modal.open { display: flex; }
+        .box-modal-header { padding: 15px; display: flex; justify-content: space-between; align-items: center; background: white; border-bottom: 1px solid #eee; }
+        .box-modal-header h3 { font-size: 0.9rem; flex: 1; margin-right: 10px; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+        .box-modal-actions { display: flex; gap: 8px; align-items: center; }
+        .box-modal-close { background: none; border: none; color: #d4a017; font-size: 2rem; cursor: pointer; line-height: 1; padding: 0 5px; }
+        .box-modal-body { flex: 1; display: flex; align-items: center; justify-content: center; background: #000; }
+        .box-modal-body iframe { width: 100%; height: 100%; border: none; }
+        
+        .toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(100px); background: #1f2937; color: white; padding: 12px 22px; border-radius: 50px; font-size: 0.8rem; font-weight: 600; z-index: 999999; transition: 0.3s; box-shadow: 0 5px 15px rgba(0,0,0,0.2); max-width: 90%; text-align: center; }
+        .toast.show { transform: translateX(-50%) translateY(0); }
+        .toast.error { background: #dc2626; }
+        
+        @media (max-width: 480px) { .box-grid { grid-template-columns: 1fr 1fr; } }
+    </style>
+</head>
+<body>
+
+<div id="offline-banner">📵 Mode hors ligne — Certaines fonctions limitées</div>
+
+<header class="header">
+    <div class="header-left">
+        <div class="logo-circle"><span>I</span><span>T</span></div>
+        <div class="header-title">
+            <h1 id="pageTitle">IMPACT <span>TV</span></h1>
+            <div class="status">
+                <span class="status-dot" id="statusIcon"></span>
+                <span id="statusText">En ligne</span>
+            </div>
+        </div>
+    </div>
+    <div class="header-actions">
+        <i class="fas fa-bell"></i>
+        <i class="fab fa-whatsapp" style="color:#25D366" id="whatsappIcon"></i>
+        
+        <button id="installBtn" class="action-btn-header btn-install-app" title="Installer l'application">
+            <i class="fas fa-download"></i>
+        </button>
+        
+        <button id="shareAppBtn" class="action-btn-header btn-share-app" title="Partager l'application">
+            <i class="fas fa-share-alt"></i>
+        </button>
+    </div>
+</header>
+
+<section id="view-home" class="view-section active">
+    <div class="container">
+        <div class="video-box">
+            <div class="live-badge"><i class="fas fa-circle"></i> EN DIRECT</div>
+            <video id="mainVideo" controls poster="https://via.placeholder.com/1280x720/1a1a2e/ffd700?text=Impact+TV">
+                <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4">
+            </video>
+        </div>
+        <div class="action-bar">
+            <button class="action-btn btn-watch" id="watchBtn"><i class="fas fa-play"></i><span>Regarder</span></button>
+            <button class="action-btn btn-share" id="shareBtn"><i class="fas fa-share-alt"></i><span>Partager</span></button>
+            <button class="action-btn btn-download" id="downloadBtn"><i class="fas fa-download"></i><span>Télécharger</span></button>
+        </div>
+        <div class="ia-box">
+            <h3><i class="fas fa-book-bible"></i> Bible Louis Segond</h3>
+            <div class="ia-input-group">
+                <input type="text" id="iaQuestion" placeholder="Ex: Jean 3:16, Genèse 1:1...">
+                <button id="askIaBtn"><i class="fas fa-search"></i> Ouvrir</button>
+            </div>
+            <div id="iaResponse" class="ia-response"></div>
+        </div>
+        <h2 class="section-title">📺 Dernières émissions</h2>
+        <div class="search-bar">
+            <i class="fas fa-search"></i>
+            <input type="text" id="searchInput" placeholder="Rechercher une émission...">
+        </div>
+        <div class="replay-grid" id="replayGrid">
+            <div class="replay-card">
+                <div class="replay-img" onclick="playVideo('https://www.w3schools.com/html/mov_bbb.mp4', 'Culte du Dimanche')">
+                    <img src="https://via.placeholder.com/400x225/1a1a2e/ffd700?text=Culte">
+                </div>
+                <div class="replay-info">
+                    <div class="replay-title">Culte du Dimanche</div>
+                    <div class="replay-date">24 mars 2024</div>
+                    <div class="replay-buttons">
+                        <button class="replay-download" onclick="event.stopPropagation(); downloadVideo('https://www.w3schools.com/html/mov_bbb.mp4', 'Culte')"><i class="fas fa-download"></i></button>
+                        <button class="replay-share" onclick="event.stopPropagation(); shareVideo('Culte', 'https://www.w3schools.com/html/mov_bbb.mp4')"><i class="fas fa-share-alt"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="info-footer">
+            <div class="info-item"><i class="fas fa-satellite-dish"></i><p>Canal+</p><strong id="canalText">n°424</strong></div>
+            <div class="info-item"><i class="fas fa-tv"></i><p>TNT</p><strong id="tntText">n°4</strong></div>
+            <div class="info-item"><i class="fas fa-globe"></i><p>Web</p><strong>impacttv.bf</strong></div>
+        </div>
+        <button class="whatsapp-btn" id="whatsappButton">
+            <i class="fab fa-whatsapp"></i> WhatsApp : 25 36 72 72
+        </button>
+    </div>
+</section>
+
+<section id="view-box" class="view-section">
+    <div class="container">
+        <div class="box-banner">
+            <h2><i class="fas fa-film"></i> Box Impact TV</h2>
+            <p>Prédications, films, dessins animés, archives</p>
+            <div class="box-search">
+                <i class="fas fa-search"></i>
+                <input type="text" id="boxSearch" placeholder="Rechercher une vidéo...">
+                <button onclick="doBoxSearch()"><i class="fas fa-arrow-right"></i></button>
+            </div>
+        </div>
+        
+        <div class="box-cats" id="boxCats">
+            <button class="box-cat active" data-cat="karambiri" onclick="setBoxCategory('karambiri')">🎤 Karambiri</button>
+            <button class="box-cat" data-cat="superbook" onclick="setBoxCategory('superbook')">📺 Superbook</button>
+            <button class="box-cat" data-cat="films" onclick="setBoxCategory('films')">🎬 Films</button>
+            <button class="box-cat" data-cat="archives" onclick="setBoxCategory('archives')">📚 Archives</button>
+            <button class="box-cat" data-cat="musique" onclick="setBoxCategory('musique')">🎵 Louange</button>
+            <button class="box-cat" data-cat="offline" onclick="showOffline()">⬇️ Hors ligne</button>
+        </div>
+
+        <div id="offlinePanel" style="display: none; padding: 15px 0;">
+            <div style="background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; padding:12px; border-radius:12px; margin-bottom:15px; font-size:0.75rem;">
+                <i class="fas fa-info-circle"></i> Retrouvez ici les vidéos que vous avez téléchargées pour les regarder hors ligne.
+            </div>
+            <div id="offlineList" style="display: flex; flex-direction: column; gap: 10px;"></div>
+        </div>
+        
+        <div class="box-grid" id="boxGrid"></div>
+        <div class="box-loader" id="boxLoader"><i class="fas fa-spinner fa-spin"></i> Chargement...</div>
+        <div class="box-end" id="boxEnd">🎉 Toutes les vidéos sont chargées</div>
+    </div>
+</section>
+
+<section id="view-community" class="view-section">
+    <div class="container">
+        <div class="community-tabs">
+            <button class="community-tab active" id="tabPosts" onclick="switchCommunityTab('posts')"><i class="fas fa-newspaper"></i> Publications</button>
+            <button class="community-tab" id="tabFriends" onclick="switchCommunityTab('friends')"><i class="fas fa-users"></i> Amis</button>
+        </div>
+        <div class="community-panel active" id="panelPosts">
+            <div class="not-registered-msg" id="notRegisteredMsg">
+                <p>📝 Vous devez être inscrit pour publier</p>
+                <button onclick="switchView('profile')">S'inscrire maintenant</button>
+            </div>
+            <div class="post-form" id="postForm">
+                <textarea id="postText" placeholder="Quoi de neuf ? Partagez une offre d'emploi, vendez un produit, racontez votre expérience..."></textarea>
+                <img id="postImagePreview" class="post-image-preview">
+                <div class="post-form-actions">
+                    <label class="post-img-btn">
+                        <i class="fas fa-image"></i> Photo
+                        <input type="file" accept="image/*" style="display:none" onchange="previewPostImage(event)">
+                    </label>
+                    <button class="post-btn" onclick="publishPost()"><i class="fas fa-paper-plane"></i> Publier</button>
+                </div>
+            </div>
+            <div id="postsList">
+                <div class="empty-community">
+                    <div class="big-icon">📝</div>
+                    <p style="font-weight:700;">Chargement des publications...</p>
+                </div>
+            </div>
+        </div>
+        <div class="community-panel" id="panelFriends">
+            <div class="community-search">
+                <div class="search-input">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="searchCommunity" placeholder="Rechercher un membre..." onkeyup="filterCommunity()">
+                </div>
+            </div>
+            <div id="communityList">
+                <div class="empty-community">
+                    <div class="big-icon">👥</div>
+                    <p style="font-weight:700;">Chargement des membres...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="view-profile" class="view-section">
+    <div class="container">
+        <div id="registerForm" class="profile-card">
+            <div class="profile-avatar-wrapper">
+                <div class="profile-avatar" id="registerAvatar">👤</div>
+                <label class="avatar-add-btn" title="Ajouter une photo">
+                    <i class="fas fa-plus"></i>
+                    <input type="file" id="avatarInput" accept="image/*" style="display:none" onchange="handleAvatarUpload(event)">
+                </label>
+            </div>
+            <h2 id="formTitle">Créer mon profil</h2>
+            <p class="subtitle">Rejoignez la communauté Impact TV</p>
+            <div class="form-group">
+                <label>Nom *</label>
+                <input type="text" id="regNom" placeholder="Votre nom de famille">
+            </div>
+            <div class="form-group">
+                <label>Prénom *</label>
+                <input type="text" id="regPrenom" placeholder="Votre prénom">
+            </div>
+            <div class="form-group">
+                <label>Ville / Région *</label>
+                <input type="text" id="regFiliere" placeholder="Ex: Ouagadougou">
+            </div>
+            <div class="form-section-title">📱 Contacts (optionnel)</div>
+            <div class="form-group">
+                <label>WhatsApp</label>
+                <div class="with-icon">
+                    <i class="fab fa-whatsapp" style="color:#25D366"></i>
+                    <input type="tel" id="regTel" placeholder="Ex: 22670000000">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Snapchat</label>
+                <div class="with-icon">
+                    <i class="fab fa-snapchat" style="color:#FFFC00"></i>
+                    <input type="text" id="regSnap" placeholder="Pseudo Snapchat">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Instagram</label>
+                <div class="with-icon">
+                    <i class="fab fa-instagram" style="color:#e6683c"></i>
+                    <input type="text" id="regInsta" placeholder="Pseudo Instagram">
+                </div>
+            </div>
+            <button class="profile-save-btn" onclick="registerUser()">
+                <i class="fas fa-check-circle"></i> <span id="btnRegisterText">S'inscrire</span>
+            </button>
+            <div class="profile-actions">
+                <button class="btn-outline" id="btnCancelEdit" onclick="cancelEdit()" style="display:none;">Annuler la modification</button>
+            </div>
+        </div>
+        <div id="profileView" class="profile-card" style="display:none;">
+            <div class="profile-avatar-wrapper">
+                <div class="profile-avatar" id="userAvatar">👤</div>
+                <label class="avatar-add-btn" title="Changer la photo">
+                    <i class="fas fa-plus"></i>
+                    <input type="file" id="avatarInputView" accept="image/*" style="display:none" onchange="handleAvatarUpload(event, true)">
+                </label>
+            </div>
+            <h2 id="userFullName">Nom Prénom</h2>
+            <p class="subtitle" id="userFiliere">Ville</p>
+            <div id="userContacts" class="user-contacts" style="justify-content:center;"></div>
+            <div class="profile-actions" style="margin-top:20px;">
+                <button class="btn-outline" onclick="openEditProfile()"><i class="fas fa-edit"></i> Modifier mon profil</button>
+                <button class="btn-outline danger" onclick="logoutProfile()"><i class="fas fa-sign-out-alt"></i> Se déconnecter</button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div id="boxModal" class="box-modal">
+    <div class="box-modal-header">
+        <h3 id="boxModalTitle"></h3>
+        <div class="box-modal-actions">
+            <button id="modalDownloadBtn" class="action-btn-header btn-install-app" style="width:32px;height:32px;" title="Télécharger">
+                <i class="fas fa-download" style="font-size:0.8rem;"></i>
+            </button>
+            <button class="box-modal-close" onclick="closeBoxModal()">×</button>
+        </div>
+    </div>
+    <div class="box-modal-body" id="boxModalBody"></div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<nav class="bottom-nav">
+    <button class="nav-btn active" id="nav-home" onclick="switchView('home')"><i class="fas fa-home"></i><span>Accueil</span></button>
+    <button class="nav-btn" id="nav-box" onclick="switchView('box')"><i class="fas fa-film"></i><span>Box</span></button>
+    <button class="nav-btn" id="nav-community" onclick="switchView('community')"><i class="fas fa-users"></i><span>Communauté</span></button>
+    <button class="nav-btn" id="nav-profile" onclick="switchView('profile')"><i class="fas fa-user-circle"></i><span>Profil</span></button>
+</nav>
+
+<script>
