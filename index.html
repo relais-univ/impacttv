@@ -1355,7 +1355,11 @@
         
         setTimeout(() => {
             const encodedRef = encodeURIComponent(reference);
-            const url = `https://www.chretien.fr/bible?q=${encodedRef}`;
+            // Remplace cette ligne :
+// const url = `https://www.chretien.fr/bible?q=${encodedRef}`;
+
+// Par celle-ci :
+const url = `https://www.chretien.fr/bible/recherche?q=${encodedRef}`;
             window.open(url, '_blank');
             
             setTimeout(() => {
