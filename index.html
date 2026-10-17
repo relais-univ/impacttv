@@ -1,0 +1,1414 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Impact TV – La Télévision du Royaume des Cieux</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="icône.png">
+    <link rel="apple-touch-icon" href="icône.png">
+    <meta name="theme-color" content="#ffffff">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.min.js"></script>
+    
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js', { scope: './' }).catch((err) => console.warn(err));
+            });
+        }
+    </script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #f3f4f6; color: #1a1a2e; padding-bottom: 90px; }
+        
+        #offline-banner { display: none; background: #dc2626; color: white; text-align: center; padding: 6px; font-size: 11px; font-weight: bold; position: fixed; top: 0; left: 0; right: 0; z-index: 999; }
+        #offline-banner.show { display: block; }
+        
+        .header { background: #ffffff; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.08); border-bottom: 3px solid #ffd700; }
+        .header-left { display: flex; align-items: center; gap: 12px; }
+        .logo-circle { width: 45px; height: 45px; background: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1.1rem; box-shadow: 0 3px 10px rgba(0,0,0,0.15); border: 2px solid #ffd700; }
+        .logo-circle span:first-child { color: #3b82f6; }
+        .logo-circle span:last-child { color: #ff8c00; }
+        .header-title h1 { font-size: 1.1rem; font-weight: 900; line-height: 1.1; color: #3b82f6; }
+        .header-title h1 span { color: #ff8c00; }
+        .header-title .status { font-size: 0.7rem; display: flex; align-items: center; gap: 4px; margin-top: 2px; color: #6b7280; }
+        .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; }
+        
+        .header-actions { display: flex; gap: 8px; align-items: center; }
+        .header-actions i { font-size: 1.2rem; color: #1a1a2e; cursor: pointer; }
+        
+        .action-btn-header { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; border: none; flex-shrink: 0; transition: 0.2s; }
+        .btn-install-app { background: linear-gradient(135deg, #ffd700, #ffb347); box-shadow: 0 3px 10px rgba(255,215,0,0.5); }
+        .btn-install-app i { color: #1a1a2e; font-size: 0.95rem; }
+        .btn-share-app { background: linear-gradient(135deg, #3b82f6, #2563eb); box-shadow: 0 3px 10px rgba(59,130,246,0.5); }
+        .btn-share-app i { color: white; font-size: 0.95rem; }
+        
+        .view-section { display: none; animation: fadeIn 0.3s ease-out; }
+        .view-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .container { max-width: 600px; margin: 0 auto; padding: 15px; }
+        
+        .video-box { position: relative; background: #000; border-radius: 20px; overflow: hidden; aspect-ratio: 16/9; box-shadow: 0 8px 25px rgba(0,0,0,0.15); }
+        video { width: 100%; height: 100%; outline: none; background: #000; object-fit: contain; }
+        .live-badge { position: absolute; top: 12px; left: 12px; background: #e74c3c; color: white; padding: 5px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; display: flex; align-items: center; gap: 6px; z-index: 15; }
+        .live-badge i { font-size: 0.55rem; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+        
+        .action-bar { display: flex; justify-content: space-around; background: white; border-radius: 60px; padding: 10px; margin-top: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+        .action-btn { background: none; border: none; display: flex; flex-direction: column; align-items: center; padding: 8px 15px; border-radius: 50px; cursor: pointer; font-size: 0.7rem; font-weight: 600; color: #1a1a2e; transition: 0.2s; }
+        .action-btn i { font-size: 1.3rem; margin-bottom: 4px; }
+        .btn-watch i { color: #d4a017; }
+        .btn-share i { color: #3498db; }
+        .btn-download i { color: #2ecc71; }
+        
+        .ia-box { background: white; border-radius: 20px; padding: 20px; margin-top: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 2px solid rgba(255,215,0,0.3); }
+        .ia-box h3 { font-size: 1rem; font-weight: 800; display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+        .ia-box h3 i { color: #ffb347; }
+        .ia-input-group { display: flex; gap: 8px; }
+        .ia-input-group input { flex: 1; padding: 12px 15px; background: #f3f4f6; border: 2px solid transparent; border-radius: 30px; font-size: 0.85rem; outline: none; }
+        .ia-input-group input:focus { border-color: #ffd700; background: white; }
+        .ia-input-group button { padding: 12px 20px; background: linear-gradient(135deg, #ffd700, #ffb347); border: none; border-radius: 30px; font-weight: 800; cursor: pointer; font-size: 0.85rem; white-space: nowrap; }
+        .ia-response { margin-top: 12px; padding: 15px; background: #f9fafb; border-radius: 15px; font-size: 0.9rem; line-height: 1.7; display: none; border-left: 4px solid #ffd700; }
+        
+        .section-title { font-size: 1.1rem; font-weight: 800; border-left: 4px solid #ffd700; padding-left: 12px; margin: 25px 0 12px; }
+        .search-bar { position: relative; margin-bottom: 15px; }
+        .search-bar i { position: absolute; left: 15px; top: 14px; color: #d4a017; }
+        .search-bar input { width: 100%; padding: 12px 15px 12px 40px; background: white; border: 2px solid transparent; border-radius: 30px; outline: none; font-size: 0.85rem; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .search-bar input:focus { border-color: #ffd700; }
+        
+        .replay-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+        .replay-card { background: white; border-radius: 14px; overflow: hidden; box-shadow: 0 3px 12px rgba(0,0,0,0.06); cursor: pointer; transition: 0.2s; border: 2px solid rgba(255,215,0,0.15); }
+        .replay-img { position: relative; aspect-ratio: 16/9; overflow: hidden; background: #1a1a2e; }
+        .replay-img img { width: 100%; height: 100%; object-fit: cover; }
+        .replay-info { padding: 10px; }
+        .replay-title { font-weight: 700; font-size: 0.78rem; line-height: 1.3; margin-bottom: 5px; }
+        .replay-date { font-size: 0.65rem; color: #d4a017; font-weight: 600; margin-bottom: 8px; }
+        .replay-buttons { display: flex; gap: 5px; }
+        .replay-buttons button { flex: 1; padding: 6px 4px; border-radius: 8px; font-size: 0.6rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 3px; border: none; }
+        .replay-download { background: rgba(46,204,113,0.15); color: #2ecc71; }
+        .replay-share { background: rgba(52,152,219,0.15); color: #3498db; }
+        
+        .info-footer { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 25px; padding: 15px; background: white; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .info-item { text-align: center; }
+        .info-item i { color: #d4a017; font-size: 1.2rem; }
+        .info-item p { font-size: 0.65rem; margin-top: 5px; color: #6b7280; }
+        .info-item strong { display: block; font-size: 0.85rem; color: #1a1a2e; }
+        .whatsapp-btn { display: block; background: #25D366; color: white; text-align: center; padding: 14px; border-radius: 50px; text-decoration: none; font-weight: 700; font-size: 0.95rem; margin-top: 15px; border: none; cursor: pointer; width: 100%; box-shadow: 0 4px 15px rgba(37,211,102,0.3); }
+        
+        .box-banner { background: linear-gradient(135deg, #1a1a2e, #0f0f1a); color: white; padding: 22px; border-radius: 22px; box-shadow: 0 8px 25px rgba(0,0,0,0.15); }
+        .box-banner h2 { font-size: 1.3rem; font-weight: 900; display: flex; align-items: center; gap: 10px; margin-bottom: 5px; }
+        .box-banner h2 i { color: #ffd700; }
+        .box-banner p { font-size: 0.75rem; opacity: 0.8; margin-bottom: 15px; }
+        .box-search { position: relative; }
+        .box-search input { width: 100%; padding: 12px 45px 12px 40px; background: rgba(255,255,255,0.95); border: none; border-radius: 30px; font-size: 0.85rem; outline: none; }
+        .box-search i.fa-search { position: absolute; left: 15px; top: 14px; color: #d4a017; }
+        .box-search button { position: absolute; right: 5px; top: 5px; background: #ffd700; border: none; width: 34px; height: 34px; border-radius: 50%; cursor: pointer; color: #1a1a2e; }
+        .box-cats { display: flex; gap: 8px; overflow-x: auto; padding: 15px 0; scrollbar-width: none; }
+        .box-cats::-webkit-scrollbar { display: none; }
+        .box-cat { white-space: nowrap; padding: 8px 16px; background: white; border: 2px solid rgba(255,215,0,0.4); border-radius: 30px; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: 0.2s; }
+        .box-cat.active { background: #ffd700; color: #1a1a2e; border-color: #ffd700; }
+        .box-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .box-card { background: white; border-radius: 14px; overflow: hidden; box-shadow: 0 3px 12px rgba(0,0,0,0.06); cursor: pointer; transition: 0.2s; }
+        .box-thumb { position: relative; aspect-ratio: 16/9; background: #1a1a2e; overflow: hidden; }
+        .box-thumb img { width: 100%; height: 100%; object-fit: cover; }
+        .box-play-icon { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); opacity: 0; transition: 0.2s; }
+        .box-play-icon i { background: rgba(0,0,0,0.7); color: #ffd700; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+        .box-card:hover .box-play-icon { opacity: 1; }
+        .box-duration { position: absolute; bottom: 5px; right: 5px; background: rgba(0,0,0,0.85); color: white; font-size: 0.6rem; font-weight: 700; padding: 3px 6px; border-radius: 4px; }
+        .box-info { padding: 10px; }
+        .box-title { font-size: 0.75rem; font-weight: 700; line-height: 1.3; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .box-author { font-size: 0.65rem; color: #d4a017; font-weight: 600; }
+        .box-loader { text-align: center; padding: 30px; color: #d4a017; }
+        .box-end { text-align: center; padding: 20px; color: #9ca3af; font-size: 0.75rem; display: none; }
+        
+        .community-tabs { display: flex; background: white; border-radius: 20px; padding: 6px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .community-tab { flex: 1; padding: 12px; background: none; border: none; border-radius: 15px; font-size: 0.85rem; font-weight: 800; cursor: pointer; color: #9ca3af; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .community-tab.active { background: linear-gradient(135deg, #ffd700, #ffb347); color: #1a1a2e; }
+        .community-panel { display: none; }
+        .community-panel.active { display: block; }
+        
+        .post-form { background: white; border-radius: 20px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); display: none; }
+        .post-form.visible { display: block; }
+        .post-form textarea { width: 100%; padding: 12px 15px; background: #f3f4f6; border: 2px solid transparent; border-radius: 15px; font-size: 0.9rem; outline: none; resize: none; font-family: inherit; min-height: 80px; transition: 0.3s; }
+        .post-form textarea:focus { border-color: #ffd700; background: white; }
+        .post-form-actions { display: flex; gap: 10px; margin-top: 10px; align-items: center; }
+        .post-image-preview { width: 100%; max-height: 200px; object-fit: cover; border-radius: 12px; margin-top: 10px; display: none; }
+        .post-image-preview.visible { display: block; }
+        .post-btn { flex: 1; padding: 12px; background: linear-gradient(135deg, #ffd700, #ffb347); border: none; border-radius: 30px; font-weight: 800; cursor: pointer; font-size: 0.85rem; }
+        .post-img-btn { background: #f3f4f6; border: none; padding: 12px 15px; border-radius: 30px; cursor: pointer; color: #1a1a2e; font-weight: 700; font-size: 0.85rem; }
+        
+        .not-registered-msg { background: rgba(255,215,0,0.15); border: 2px solid rgba(255,215,0,0.3); border-radius: 20px; padding: 20px; text-align: center; margin-bottom: 15px; }
+        .not-registered-msg p { font-size: 0.85rem; color: #1a1a2e; font-weight: 600; margin-bottom: 12px; }
+        .not-registered-msg button { background: linear-gradient(135deg, #ffd700, #ffb347); border: none; padding: 12px 24px; border-radius: 30px; font-weight: 800; cursor: pointer; }
+        
+        .post-card { background: white; border-radius: 20px; padding: 15px; margin-bottom: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .post-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+        .post-avatar { width: 45px; height: 45px; background: linear-gradient(135deg, #ffd700, #ffb347); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; color: #1a1a2e; font-size: 1.1rem; flex-shrink: 0; overflow: hidden; }
+        .post-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .post-info h4 { font-size: 0.9rem; font-weight: 800; }
+        .post-info p { font-size: 0.7rem; color: #9ca3af; margin-top: 2px; }
+        .post-text { font-size: 0.9rem; line-height: 1.6; color: #1a1a2e; white-space: pre-wrap; word-wrap: break-word; }
+        .post-image { width: 100%; border-radius: 12px; margin-top: 10px; max-height: 400px; object-fit: cover; }
+        .post-delete { margin-left: auto; background: none; border: none; color: #dc2626; cursor: pointer; font-size: 0.9rem; padding: 5px; }
+        
+        .community-search { background: white; padding: 15px; border-radius: 20px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .community-search .search-input { position: relative; }
+        .community-search input { width: 100%; padding: 12px 15px 12px 40px; background: #f3f4f6; border: 2px solid transparent; border-radius: 15px; outline: none; font-size: 0.9rem; }
+        .community-search input:focus { border-color: #ffd700; background: white; }
+        .community-search i { position: absolute; left: 14px; top: 14px; color: #9ca3af; }
+        
+        .user-card { background: white; border-radius: 20px; padding: 15px; margin-bottom: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #f3f4f6; }
+        .user-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+        .user-avatar { width: 55px; height: 55px; background: linear-gradient(135deg, #ffd700, #ffb347); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: 900; color: #1a1a2e; flex-shrink: 0; border: 3px solid white; box-shadow: 0 3px 10px rgba(255,215,0,0.4); overflow: hidden; }
+        .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .user-info { flex: 1; min-width: 0; }
+        .user-info h4 { font-size: 0.95rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .user-info p { font-size: 0.75rem; color: #6b7280; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .user-contacts { display: flex; flex-wrap: wrap; gap: 8px; }
+        .user-contacts a { display: inline-flex; align-items: center; gap: 5px; padding: 7px 14px; border-radius: 30px; text-decoration: none; font-weight: 700; font-size: 0.72rem; transition: 0.2s; }
+        .user-whatsapp { background: #25D366; color: white; }
+        .user-snapchat { background: #FFFC00; color: #000; }
+        .user-instagram { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); color: white; }
+        .user-no-contact { font-size: 0.72rem; color: #9ca3af; font-style: italic; padding: 5px 0; }
+        
+        .empty-community { text-align: center; padding: 50px 20px; color: #6b7280; }
+        .empty-community .big-icon { font-size: 3rem; margin-bottom: 15px; }
+        
+        .profile-card { background: white; border-radius: 25px; padding: 25px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
+        .profile-avatar-wrapper { position: relative; width: 90px; height: 90px; margin: 0 auto 15px; }
+        .profile-avatar-wrapper .profile-avatar { margin: 0; width: 90px; height: 90px; background: linear-gradient(135deg, #ffd700, #ffb347); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; color: #1a1a2e; font-weight: 900; border: 4px solid white; box-shadow: 0 5px 20px rgba(255,215,0,0.4); }
+        .profile-avatar-wrapper .profile-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+        .avatar-add-btn { position: absolute; bottom: 0; right: 0; width: 32px; height: 32px; background: linear-gradient(135deg, #ffd700, #ffb347); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 3px solid white; box-shadow: 0 3px 10px rgba(0,0,0,0.2); transition: 0.2s; }
+        .avatar-add-btn:hover { transform: scale(1.1); }
+        .avatar-add-btn i { color: #1a1a2e; font-size: 0.9rem; font-weight: 900; }
+        .profile-card h2 { font-size: 1.4rem; font-weight: 900; margin-bottom: 5px; }
+        .profile-card .subtitle { font-size: 0.8rem; color: #6b7280; margin-bottom: 20px; font-weight: 600; }
+        
+        .form-group { text-align: left; margin-bottom: 14px; }
+        .form-group label { display: block; font-size: 0.75rem; font-weight: 800; color: #1a1a2e; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-group input { width: 100%; padding: 13px 15px; background: #f3f4f6; border: 2px solid transparent; border-radius: 15px; font-size: 0.9rem; outline: none; transition: 0.3s; }
+        .form-group input:focus { border-color: #ffd700; background: white; }
+        .form-group .with-icon { position: relative; }
+        .form-group .with-icon i { position: absolute; left: 15px; top: 15px; font-size: 1rem; }
+        .form-group .with-icon input { padding-left: 42px; }
+        .form-section-title { text-align: left; font-size: 0.7rem; font-weight: 800; color: #6b7280; text-transform: uppercase; letter-spacing: 1px; margin: 20px 0 12px; padding-top: 15px; border-top: 1px solid #f3f4f6; }
+        
+        .profile-save-btn { width: 100%; padding: 15px; background: linear-gradient(135deg, #ffd700, #ffb347); border: none; border-radius: 40px; color: #1a1a2e; font-weight: 900; font-size: 1rem; cursor: pointer;         margin-top: 15px; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; }
+        .profile-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+        .btn-outline { width: 100%; padding: 12px; background: white; border: 2px solid #e5e7eb; border-radius: 40px; color: #6b7280; font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: 0.2s; }
+        .btn-outline:hover { border-color: #ffd700; color: #1a1a2e; }
+        .btn-outline.danger { color: #dc2626; border-color: rgba(220,38,38,0.3); }
+        
+        .bottom-nav { position: fixed !important; bottom: 0 !important; left: 0 !important; right: 0 !important; top: auto !important; width: 100%; background: white; display: flex; justify-content: space-around; padding: 8px 0; padding-bottom: calc(8px + env(safe-area-inset-bottom)); box-shadow: 0 -4px 20px rgba(0,0,0,0.08); z-index: 99999 !important; border-top: 1px solid rgba(255,215,0,0.2); transform: translateZ(0); will-change: transform; }
+        .nav-btn { flex: 1; background: none; border: none; display: flex; flex-direction: column; align-items: center; padding: 6px 0; cursor: pointer; color: #9ca3af; font-size: 0.65rem; font-weight: 700; transition: 0.2s; position: relative; }
+        .nav-btn i { font-size: 1.3rem; margin-bottom: 3px; }
+        .nav-btn.active { color: #d4a017; }
+        .nav-btn.active::before { content: ''; position: absolute; top: -8px; left: 50%; transform: translateX(-50%); width: 30px; height: 3px; background: #ffd700; border-radius: 2px; }
+        
+        .box-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 99999; display: none; flex-direction: column; }
+        .box-modal.open { display: flex; }
+        .box-modal-header { padding: 15px; display: flex; justify-content: space-between; align-items: center; background: white; border-bottom: 1px solid #eee; }
+        .box-modal-header h3 { font-size: 0.9rem; flex: 1; margin-right: 10px; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+        .box-modal-actions { display: flex; gap: 8px; align-items: center; }
+        .box-modal-close { background: none; border: none; color: #d4a017; font-size: 2rem; cursor: pointer; line-height: 1; padding: 0 5px; }
+        .box-modal-body { flex: 1; display: flex; align-items: center; justify-content: center; background: #000; }
+        .box-modal-body iframe { width: 100%; height: 100%; border: none; }
+        
+        .toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(100px); background: #1f2937; color: white; padding: 12px 22px; border-radius: 50px; font-size: 0.8rem; font-weight: 600; z-index: 999999; transition: 0.3s; box-shadow: 0 5px 15px rgba(0,0,0,0.2); max-width: 90%; text-align: center; }
+        .toast.show { transform: translateX(-50%) translateY(0); }
+        .toast.error { background: #dc2626; }
+        
+        @media (max-width: 480px) { .box-grid { grid-template-columns: 1fr 1fr; } }
+    </style>
+</head>
+<body>
+
+<div id="offline-banner">📵 Mode hors ligne — Certaines fonctions limitées</div>
+
+<header class="header">
+    <div class="header-left">
+        <div class="logo-circle"><span>I</span><span>T</span></div>
+        <div class="header-title">
+            <h1 id="pageTitle">IMPACT <span>TV</span></h1>
+            <div class="status">
+                <span class="status-dot" id="statusIcon"></span>
+                <span id="statusText">En ligne</span>
+            </div>
+        </div>
+    </div>
+    <div class="header-actions">
+        <i class="fas fa-bell"></i>
+        <i class="fab fa-whatsapp" style="color:#25D366" id="whatsappIcon"></i>
+        
+        <button id="installBtn" class="action-btn-header btn-install-app" title="Installer l'application">
+            <i class="fas fa-download"></i>
+        </button>
+        
+        <button id="shareAppBtn" class="action-btn-header btn-share-app" title="Partager l'application">
+            <i class="fas fa-share-alt"></i>
+        </button>
+    </div>
+</header>
+
+<section id="view-home" class="view-section active">
+    <div class="container">
+        <div class="video-box">
+            <div class="live-badge"><i class="fas fa-circle"></i> EN DIRECT</div>
+            <video id="mainVideo" controls poster="https://via.placeholder.com/1280x720/1a1a2e/ffd700?text=Impact+TV">
+                <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4">
+            </video>
+        </div>
+        <div class="action-bar">
+            <button class="action-btn btn-watch" id="watchBtn"><i class="fas fa-play"></i><span>Regarder</span></button>
+            <button class="action-btn btn-share" id="shareBtn"><i class="fas fa-share-alt"></i><span>Partager</span></button>
+            <button class="action-btn btn-download" id="downloadBtn"><i class="fas fa-download"></i><span>Télécharger</span></button>
+        </div>
+        <div class="ia-box">
+            <h3><i class="fas fa-book-bible"></i> Bible Louis Segond</h3>
+            <div class="ia-input-group">
+                <input type="text" id="iaQuestion" placeholder="Ex: Jean 3:16, Genèse 1:1...">
+                <button id="askIaBtn"><i class="fas fa-search"></i> Ouvrir</button>
+            </div>
+            <div id="iaResponse" class="ia-response"></div>
+        </div>
+        <h2 class="section-title">📺 Dernières émissions</h2>
+        <div class="search-bar">
+            <i class="fas fa-search"></i>
+            <input type="text" id="searchInput" placeholder="Rechercher une émission...">
+        </div>
+        <div class="replay-grid" id="replayGrid">
+            <div class="replay-card">
+                <div class="replay-img" onclick="playVideo('https://www.w3schools.com/html/mov_bbb.mp4', 'Culte du Dimanche')">
+                    <img src="https://via.placeholder.com/400x225/1a1a2e/ffd700?text=Culte">
+                </div>
+                <div class="replay-info">
+                    <div class="replay-title">Culte du Dimanche</div>
+                    <div class="replay-date">24 mars 2024</div>
+                    <div class="replay-buttons">
+                        <button class="replay-download" onclick="event.stopPropagation(); downloadVideo('https://www.w3schools.com/html/mov_bbb.mp4', 'Culte')"><i class="fas fa-download"></i></button>
+                        <button class="replay-share" onclick="event.stopPropagation(); shareVideo('Culte', 'https://www.w3schools.com/html/mov_bbb.mp4')"><i class="fas fa-share-alt"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="info-footer">
+            <div class="info-item"><i class="fas fa-satellite-dish"></i><p>Canal+</p><strong id="canalText">n°424</strong></div>
+            <div class="info-item"><i class="fas fa-tv"></i><p>TNT</p><strong id="tntText">n°4</strong></div>
+            <div class="info-item"><i class="fas fa-globe"></i><p>Web</p><strong>impacttv.bf</strong></div>
+        </div>
+        <button class="whatsapp-btn" id="whatsappButton">
+            <i class="fab fa-whatsapp"></i> WhatsApp : 25 36 72 72
+        </button>
+    </div>
+</section>
+
+<section id="view-box" class="view-section">
+    <div class="container">
+        <div class="box-banner">
+            <h2><i class="fas fa-film"></i> Box Impact TV</h2>
+            <p>Prédications, films, dessins animés, archives</p>
+            <div class="box-search">
+                <i class="fas fa-search"></i>
+                <input type="text" id="boxSearch" placeholder="Rechercher une vidéo...">
+                <button onclick="doBoxSearch()"><i class="fas fa-arrow-right"></i></button>
+            </div>
+        </div>
+        
+        <div class="box-cats" id="boxCats">
+            <button class="box-cat active" data-cat="karambiri" onclick="setBoxCategory('papakarambiri')">🎤 Karambiri</button>
+            <button class="box-cat" data-cat="superbook" onclick="setBoxCategory('superbook')">📺 Superbook</button>
+            <button class="box-cat" data-cat="films" onclick="setBoxCategory('films')">🎬 Films</button>
+            <button class="box-cat" data-cat="musique" onclick="setBoxCategory('musique')">🎵 Louange</button>
+            <button class="box-cat" data-cat="offline" onclick="showOffline()">⬇️ Hors ligne</button>
+        </div>
+
+        <div id="offlinePanel" style="display: none; padding: 15px 0;">
+            <div style="background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; padding:12px; border-radius:12px; margin-bottom:15px; font-size:0.75rem;">
+                <i class="fas fa-info-circle"></i> Retrouvez ici les vidéos que vous avez téléchargées pour les regarder hors ligne.
+            </div>
+            <div id="offlineList" style="display: flex; flex-direction: column; gap: 10px;"></div>
+        </div>
+        
+        <div class="box-grid" id="boxGrid"></div>
+        <div class="box-loader" id="boxLoader"><i class="fas fa-spinner fa-spin"></i> Chargement...</div>
+        <div class="box-end" id="boxEnd">🎉 Toutes les vidéos sont chargées</div>
+    </div>
+</section>
+
+<section id="view-community" class="view-section">
+    <div class="container">
+        <div class="community-tabs">
+            <button class="community-tab active" id="tabPosts" onclick="switchCommunityTab('posts')"><i class="fas fa-newspaper"></i> Publications</button>
+            <button class="community-tab" id="tabFriends" onclick="switchCommunityTab('friends')"><i class="fas fa-users"></i> Amis</button>
+        </div>
+        <div class="community-panel active" id="panelPosts">
+            <div class="not-registered-msg" id="notRegisteredMsg">
+                <p>📝 Vous devez être inscrit pour publier</p>
+                <button onclick="switchView('profile')">S'inscrire maintenant</button>
+            </div>
+            <div class="post-form" id="postForm">
+                <textarea id="postText" placeholder="Quoi de neuf ? Partagez une offre d'emploi, vendez un produit, racontez votre expérience..."></textarea>
+                <img id="postImagePreview" class="post-image-preview">
+                <div class="post-form-actions">
+                    <label class="post-img-btn">
+                        <i class="fas fa-image"></i> Photo
+                        <input type="file" accept="image/*" style="display:none" onchange="previewPostImage(event)">
+                    </label>
+                    <button class="post-btn" onclick="publishPost()"><i class="fas fa-paper-plane"></i> Publier</button>
+                </div>
+            </div>
+            <div id="postsList">
+                <div class="empty-community">
+                    <div class="big-icon">📝</div>
+                    <p style="font-weight:700;">Chargement des publications...</p>
+                </div>
+            </div>
+        </div>
+        <div class="community-panel" id="panelFriends">
+            <div class="community-search">
+                <div class="search-input">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="searchCommunity" placeholder="Rechercher un membre..." onkeyup="filterCommunity()">
+                </div>
+            </div>
+            <div id="communityList">
+                <div class="empty-community">
+                    <div class="big-icon">👥</div>
+                    <p style="font-weight:700;">Chargement des membres...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="view-profile" class="view-section">
+    <div class="container">
+        <div id="registerForm" class="profile-card">
+            <div class="profile-avatar-wrapper">
+                <div class="profile-avatar" id="registerAvatar">👤</div>
+                <label class="avatar-add-btn" title="Ajouter une photo">
+                    <i class="fas fa-plus"></i>
+                    <input type="file" id="avatarInput" accept="image/*" style="display:none" onchange="handleAvatarUpload(event)">
+                </label>
+            </div>
+            <h2 id="formTitle">Créer mon profil</h2>
+            <p class="subtitle">Rejoignez la communauté Impact TV</p>
+            <div class="form-group">
+                <label>Nom *</label>
+                <input type="text" id="regNom" placeholder="Votre nom de famille">
+            </div>
+            <div class="form-group">
+                <label>Prénom *</label>
+                <input type="text" id="regPrenom" placeholder="Votre prénom">
+            </div>
+            <div class="form-group">
+                <label>Ville / Région *</label>
+                <input type="text" id="regFiliere" placeholder="Ex: Ouagadougou">
+            </div>
+            <div class="form-section-title">📱 Contacts (optionnel)</div>
+            <div class="form-group">
+                <label>WhatsApp</label>
+                <div class="with-icon">
+                    <i class="fab fa-whatsapp" style="color:#25D366"></i>
+                    <input type="tel" id="regTel" placeholder="Ex: 22670000000">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Snapchat</label>
+                <div class="with-icon">
+                    <i class="fab fa-snapchat" style="color:#FFFC00"></i>
+                    <input type="text" id="regSnap" placeholder="Pseudo Snapchat">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Instagram</label>
+                <div class="with-icon">
+                    <i class="fab fa-instagram" style="color:#e6683c"></i>
+                    <input type="text" id="regInsta" placeholder="Pseudo Instagram">
+                </div>
+            </div>
+            <button class="profile-save-btn" onclick="registerUser()">
+                <i class="fas fa-check-circle"></i> <span id="btnRegisterText">S'inscrire</span>
+            </button>
+            <div class="profile-actions">
+                <button class="btn-outline" id="btnCancelEdit" onclick="cancelEdit()" style="display:none;">Annuler la modification</button>
+            </div>
+        </div>
+        <div id="profileView" class="profile-card" style="display:none;">
+            <div class="profile-avatar-wrapper">
+                <div class="profile-avatar" id="userAvatar">👤</div>
+                <label class="avatar-add-btn" title="Changer la photo">
+                    <i class="fas fa-plus"></i>
+                    <input type="file" id="avatarInputView" accept="image/*" style="display:none" onchange="handleAvatarUpload(event, true)">
+                </label>
+            </div>
+            <h2 id="userFullName">Nom Prénom</h2>
+            <p class="subtitle" id="userFiliere">Ville</p>
+            <div id="userContacts" class="user-contacts" style="justify-content:center;"></div>
+            <div class="profile-actions" style="margin-top:20px;">
+                <button class="btn-outline" onclick="openEditProfile()"><i class="fas fa-edit"></i> Modifier mon profil</button>
+                <button class="btn-outline danger" onclick="logoutProfile()"><i class="fas fa-sign-out-alt"></i> Se déconnecter</button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div id="boxModal" class="box-modal">
+    <div class="box-modal-header">
+        <h3 id="boxModalTitle"></h3>
+        <div class="box-modal-actions">
+            <button id="modalDownloadBtn" class="action-btn-header btn-install-app" style="width:32px;height:32px;" title="Télécharger">
+                <i class="fas fa-download" style="font-size:0.8rem;"></i>
+            </button>
+            <button class="box-modal-close" onclick="closeBoxModal()">×</button>
+        </div>
+    </div>
+    <div class="box-modal-body" id="boxModalBody"></div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<nav class="bottom-nav">
+    <button class="nav-btn active" id="nav-home" onclick="switchView('home')"><i class="fas fa-home"></i><span>Accueil</span></button>
+    <button class="nav-btn" id="nav-box" onclick="switchView('box')"><i class="fas fa-film"></i><span>Box</span></button>
+    <button class="nav-btn" id="nav-community" onclick="switchView('community')"><i class="fas fa-users"></i><span>Communauté</span></button>
+    <button class="nav-btn" id="nav-profile" onclick="switchView('profile')"><i class="fas fa-user-circle"></i><span>Profil</span></button>
+</nav>
+
+<script>    const firebaseConfig = {
+        apiKey: "AIzaSyAetkuLcYgAfdkuwvMjZ11WukfgFHnbulo",
+        authDomain: "faso-opportunites-57088.firebaseapp.com",
+        projectId: "faso-opportunites-57088",
+        storageBucket: "faso-opportunites-57088.firebasestorage.app",
+        messagingSenderId: "489210307173",
+        appId: "1:489210307173:web:1a14ce1e19ff0054331c8c"
+    };
+    
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+    
+    const liveUrlRef = database.ref('direct/liveUrl');
+    const canalRef = database.ref('info/canal');
+    const tntRef = database.ref('info/tnt');
+    const whatsappRef = database.ref('info/whatsapp');
+    const boxCustomRef = database.ref('box/custom');
+    const usersRef = database.ref('impact_users');
+    const postsRef = database.ref('impact_posts');
+    
+    let currentLiveUrl = null;
+    let currentVideoUrl = "https://www.w3schools.com/html/mov_bbb.mp4";
+    let currentVideoTitle = "Impact TV - Direct";
+    let liveUrlInitialized = false;
+    
+    let boxCategory = 'karambiri';
+    let boxQuery = '';
+    let boxVideos = [];
+    let boxLoading = false;
+    let boxCustomVideos = [];
+    let boxPage = 1;
+    let boxHasMore = true;
+    let currentModalVideo = null;
+    
+    let communityUsers = [];
+    let currentUserId = localStorage.getItem('impact_user_id') || null;
+    let editingUserId = null;
+    let postImageData = null;
+    let avatarImageData = null;
+    
+    let deferredInstallPrompt = null;
+    
+    const PIPED_INSTANCES = [
+        'https://pipedapi.kavin.rocks',
+        'https://pipedapi.adminforge.de',
+        'https://api.piped.private.coffee',
+        'https://pipedapi.reallyaweso.me',
+        'https://pipedapi.drgns.space'
+    ];
+    
+    const BOX_CONFIG = {
+        karambiri: { q: 'Pasteur Mamadou Karambiri prédication française' },
+        superbook: { q: 'Superbook français dessin animé bible enfant VF' },
+        films:     { q: 'film biblique français Moïse Abraham David Jésus VF complet' },
+        musique:   { q: 'louange adoration chrétienne française cantique bible' }
+    };
+    
+    function showToast(msg, isError = false) {
+        const toast = document.getElementById('toast');
+        toast.textContent = msg;
+        toast.className = isError ? 'toast error show' : 'toast show';
+        setTimeout(() => toast.classList.remove('show'), 3500);
+    }
+    
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m] || m));
+    }
+    
+    // ==================== BOUTONS INSTALLER & PARTAGER ====================
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredInstallPrompt = e;
+    });
+    
+    document.getElementById('installBtn').addEventListener('click', async () => {
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        
+        if (isStandalone) {
+            alert("✅ L'application est déjà installée sur votre appareil !\n\nSi vous ne voyez pas l'icône sur votre écran d'accueil :\n1. Faites glisser votre doigt vers le haut pour ouvrir le tiroir d'applications.\n2. Maintenez le doigt sur l'icône Impact TV.\n3. Choisissez 'Ajouter à l'écran d'accueil'.");
+            return;
+        }
+        
+        if (deferredInstallPrompt) {
+            deferredInstallPrompt.prompt();
+            const { outcome } = await deferredInstallPrompt.userChoice;
+            if (outcome === 'accepted') {
+                showToast('✅ Installation en cours... Vérifiez votre tiroir d\'applications.');
+            }
+            deferredInstallPrompt = null;
+        } else {
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            alert(isIOS ? '📱 Sur iPhone : Partager ⬆️ -> Sur l\'écran d\'accueil' : '📱 Sur Android : Menu ⋮ -> Installer l\'application');
+        }
+    });
+    
+    document.getElementById('shareAppBtn').addEventListener('click', async () => {
+        const shareData = {
+            title: 'Impact TV',
+            text: '📺 Regardez Impact TV – La Télévision du Royaume des Cieux !',
+            url: window.location.origin
+        };
+        if (navigator.share) {
+            try { await navigator.share(shareData); } catch (err) {}
+        } else {
+            try {
+                await navigator.clipboard.writeText(shareData.text + '\n' + shareData.url);
+                showToast('📋 Lien copié !');
+            } catch (e) { prompt('Copiez ce lien :', window.location.origin); }
+        }
+    });
+    
+    // ==================== NAVIGATION ====================
+    function switchView(view) {
+        document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        
+        const target = document.getElementById('view-' + view);
+        const btn = document.getElementById('nav-' + view);
+        
+        if (target) target.classList.add('active');
+        if (btn) btn.classList.add('active');
+        
+        const titles = {
+            'home': 'IMPACT <span style="color:#ff8c00">TV</span>',
+            'box': '<span style="color:#3b82f6">Box</span> <span style="color:#ff8c00">Impact</span>',
+            'community': '<span style="color:#3b82f6">Communauté</span>',
+            'profile': '<span style="color:#3b82f6">Mon Profil</span>'
+        };
+        document.getElementById('pageTitle').innerHTML = titles[view] || 'IMPACT <span style="color:#ff8c00">TV</span>';
+        
+        if (view === 'box' && boxVideos.length === 0) loadBox(true);
+        if (view === 'community') {
+            loadCommunityUsers();
+            loadPosts();
+            checkPostPermission();
+        }
+        if (view === 'profile') checkUserProfile();
+        
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    
+    function updateOnlineStatus() {
+        const statusDot = document.getElementById('statusIcon');
+        const statusText = document.getElementById('statusText');
+        const banner = document.getElementById('offline-banner');
+        
+        if (navigator.onLine) {
+            statusDot.style.background = '#22c55e';
+            statusText.textContent = 'En ligne';
+            banner.classList.remove('show');
+        } else {
+            statusDot.style.background = '#dc2626';
+            statusText.textContent = 'Hors ligne';
+            banner.classList.add('show');
+        }
+    }
+    
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+    
+    // ==================== LECTEUR ====================
+    function playVideo(url, title) {
+        const video = document.getElementById('mainVideo');
+        video.src = url;
+        video.load();
+        video.play().catch(e => console.log("Lecture bloquée"));
+        currentVideoUrl = url;
+        currentVideoTitle = title;
+        switchView('home');
+        showToast('📺 ' + title);
+    }
+    
+    function playLive() {
+        if (currentLiveUrl) { playVideo(currentLiveUrl, 'Impact TV - Direct'); } 
+        else { showToast('Aucun direct configuré', true); }
+    }
+    
+    document.getElementById('watchBtn').onclick = () => playLive();
+    
+    // ==================== FIREBASE SYNC ====================
+    liveUrlRef.on('value', (snap) => {
+        const url = snap.val();
+        if (url) {
+            if (liveUrlInitialized && currentLiveUrl !== url) showToast('📡 Direct mis à jour');
+            currentLiveUrl = url;
+            liveUrlInitialized = true;
+        }
+    });
+    
+    canalRef.on('value', (s) => { const v = s.val(); if (v) document.getElementById('canalText').innerText = v; });
+    tntRef.on('value', (s) => { const v = s.val(); if (v) document.getElementById('tntText').innerText = v; });
+    whatsappRef.on('value', (s) => {
+        const v = s.val();
+        if (v) {
+            const formatted = `${v.slice(0,2)} ${v.slice(2,4)} ${v.slice(4,6)} ${v.slice(6,8)}`;
+            const waBtn = document.getElementById('whatsappButton');
+            waBtn.innerHTML = `<i class="fab fa-whatsapp"></i> WhatsApp : ${formatted}`;
+            waBtn.onclick = () => window.open(`https://wa.me/226${v}?text=Bonjour%20Impact%20TV`, '_blank');
+            document.getElementById('whatsappIcon').onclick = () => window.open(`https://wa.me/226${v}?text=Bonjour%20Impact%20TV`, '_blank');
+        }
+    });
+    
+    boxCustomRef.on('value', (snap) => {
+        const data = snap.val();
+        boxCustomVideos = data ? Object.values(data) : [];
+    });
+    
+    // ==================== RECHERCHE ÉMISSIONS ====================
+    document.getElementById('searchInput').oninput = function(e) {
+        const term = e.target.value.toLowerCase();
+        document.querySelectorAll('.replay-card').forEach(card => {
+            const title = card.querySelector('.replay-title').textContent.toLowerCase();
+            card.style.display = title.includes(term) ? '' : 'none';
+        });
+    };
+    
+    // ==================== PARTAGE ====================
+    function openNativeShare(title, text, url) {
+        if (navigator.share) {
+            navigator.share({ title, text, url }).catch(e => console.log);
+        } else {
+            navigator.clipboard.writeText(url).then(() => showToast('📋 Lien copié !'));
+        }
+    }
+    
+    document.getElementById('shareBtn').onclick = () => {
+        openNativeShare(currentVideoTitle, 'Regardez ' + currentVideoTitle + ' sur Impact TV', window.location.href);
+    };
+    
+    window.shareVideo = (title, url) => {
+        openNativeShare(title, 'Regardez "' + title + '" sur Impact TV', url);
+    };
+    
+    // ==================== TÉLÉCHARGEMENT DIRECT ====================
+    window.downloadVideo = function(url, title) {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'Impact_TV_' + title.replace(/[^a-z0-9]/gi, '_') + '.mp4';
+        a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        showToast('✅ Téléchargement dans le dossier "Téléchargements" !');
+    };
+    
+    document.getElementById('downloadBtn').onclick = () => {
+        window.downloadVideo(currentVideoUrl, currentVideoTitle);
+    };
+    
+    // ==================== TÉLÉCHARGEMENT BOX AVEC SAUVEGARDE HORS LIGNE ====================
+    async function downloadBoxVideo(id) {
+        const v = boxVideos.find(x => x.id === id);
+        if (!v) return;
+        showToast('⏳ Préparation du téléchargement réel...');
+        
+        for (const inst of PIPED_INSTANCES) {
+            try {
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 10000);
+                const res = await fetch(`${inst}/streams/${v.videoId}`, { signal: controller.signal });
+                clearTimeout(timeout);
+                if (!res.ok) continue;
+                const data = await res.json();
+                const streams = (data?.videoStreams || [])
+                    .filter(s => s.mimeType && s.mimeType.includes('mp4') && s.videoOnly !== true)
+                    .sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0));
+                if (streams.length === 0) continue;
+                
+                const best = streams.find(s => s.quality === '720p') || streams[0];
+                
+                const a = document.createElement('a');
+                a.href = best.url;
+                a.download = (v.title || 'video').replace(/[^a-z0-9]/gi, '_') + '.mp4';
+                a.target = '_blank';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                
+                saveToOffline(v, best.url);
+                
+                showToast('✅ Vidéo téléchargée ! Retrouvez-la dans l\'onglet Hors ligne.');
+                return;
+            } catch (e) { continue; }
+        }
+        showToast('⚠️ Téléchargement indisponible pour le moment', true);
+    }
+    
+    document.getElementById('modalDownloadBtn').onclick = () => {
+        if (currentModalVideo) downloadBoxVideo(currentModalVideo.id);
+    };
+    
+    // ==================== GESTION HORS LIGNE ====================
+    function saveToOffline(v, url) {
+        try {
+            let off = JSON.parse(localStorage.getItem('impact_offline') || '[]');
+            off = off.filter(o => o.id !== v.id);
+            off.unshift({ id: v.id, title: v.title, thumb: v.thumb, videoId: v.videoId, url: url, ts: Date.now() });
+            off = off.slice(0, 100);
+            localStorage.setItem('impact_offline', JSON.stringify(off));
+        } catch (e) {}
+    }
+    
+    function getOfflineVideos() {
+        return JSON.parse(localStorage.getItem('impact_offline') || '[]');
+    }
+    
+    function renderOfflineList() {
+        const el = document.getElementById('offlineList');
+        if (!el) return;
+        const off = getOfflineVideos();
+        if (off.length === 0) {
+            el.innerHTML = `<p style="text-align:center; color:#9ca3af; font-size:0.8rem; padding:20px;">Aucune vidéo hors ligne pour l'instant.</p>`;
+            return;
+        }
+        el.innerHTML = off.map(o => `
+            <div style="display:flex; align-items:center; gap:10px; background:white; padding:10px; border-radius:12px; border:1px solid #f3f4f6;">
+                <img src="${o.thumb}" style="width:60px; height:45px; object-fit:cover; border-radius:6px;">
+                <div style="flex:1; min-width:0;">
+                    <h4 style="font-size:0.75rem; font-weight:700; color:#1a1a2e; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(o.title)}</h4>
+                    <p style="font-size:0.65rem; color:#9ca3af; margin-top:2px;">Téléchargée le ${new Date(o.ts).toLocaleDateString('fr-FR')}</p>
+                </div>
+                <button onclick="playOffline('${o.id}')" style="background:#2ecc71; color:white; border:none; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"><i class="fas fa-play"></i></button>
+                <button onclick="removeOffline('${o.id}')" style="background:none; border:none; color:#dc2626; cursor:pointer; padding:5px;"><i class="fas fa-trash"></i></button>
+            </div>
+        `).join('');
+    }
+    
+    function playOffline(id) {
+        const off = getOfflineVideos();
+        const o = off.find(x => x.id === id);
+        if (!o) return;
+        if (o.url) {
+            window.open(o.url, '_blank');
+        } else {
+            showToast("⚠️ Lien indisponible", true);
+        }
+    }
+    
+    function removeOffline(id) {
+        let off = getOfflineVideos();
+        off = off.filter(o => o.id !== id);
+        localStorage.setItem('impact_offline', JSON.stringify(off));
+        renderOfflineList();
+        showToast('🗑️ Vidéo retirée');
+    }
+    
+    function showOffline() {
+        document.getElementById('boxCats').style.display = 'none';
+        document.getElementById('boxGrid').style.display = 'none';
+        document.getElementById('boxLoader').style.display = 'none';
+        document.getElementById('boxEnd').style.display = 'none';
+        const panel = document.getElementById('offlinePanel');
+        panel.style.display = 'block';
+        panel.classList.remove('hidden');
+        renderOfflineList();
+    }
+    
+    function hideOffline() {
+        document.getElementById('boxCats').style.display = 'flex';
+        document.getElementById('boxGrid').style.display = 'grid';
+        document.getElementById('offlinePanel').style.display = 'none';
+        document.getElementById('offlinePanel').classList.add('hidden');
+    }
+    
+    // ==================== PHOTO DE PROFIL ====================
+    async function handleAvatarUpload(event, isView = false) {
+        const file = event.target.files[0];
+        if (!file) return;
+        showToast('📸 Compression en cours...');
+        
+        try {
+            const compressedFile = await imageCompression(file, { maxSizeMB: 0.1, maxWidthOrHeight: 400, useWebWorker: true, initialQuality: 0.85 });
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                avatarImageData = ev.target.result;
+                const targetId = isView ? 'userAvatar' : 'registerAvatar';
+                document.getElementById(targetId).innerHTML = `<img src="${avatarImageData}" alt="Photo">`;
+                showToast('✅ Photo chargée !');
+            };
+            reader.readAsDataURL(compressedFile);
+        } catch (error) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                avatarImageData = ev.target.result;
+                const targetId = isView ? 'userAvatar' : 'registerAvatar';
+                document.getElementById(targetId).innerHTML = `<img src="${avatarImageData}" alt="Photo">`;
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+    
+    // ==================== INSCRIPTION / PROFIL ====================
+    function checkUserProfile() {
+        if (currentUserId) {
+            usersRef.child(currentUserId).once('value').then(snap => {
+                const user = snap.val();
+                if (user) showProfileView(user);
+                else showRegisterView();
+            });
+        } else showRegisterView();
+    }
+    
+    function showRegisterView() {
+        document.getElementById('registerForm').style.display = 'block';
+        document.getElementById('profileView').style.display = 'none';
+    }
+    
+    function showProfileView(user) {
+        document.getElementById('registerForm').style.display = 'none';
+        document.getElementById('profileView').style.display = 'block';
+        
+        const fullName = `${user.prenom || ''} ${user.nom || ''}`.trim();
+        document.getElementById('userFullName').textContent = fullName || 'Utilisateur';
+        document.getElementById('userFiliere').textContent = user.filiere || 'Impact TV';
+        
+        const userAvatar = document.getElementById('userAvatar');
+        if (user.avatar) {
+            userAvatar.innerHTML = `<img src="${user.avatar}" alt="Photo">`;
+            avatarImageData = user.avatar;
+        } else {
+            userAvatar.textContent = (user.prenom || user.nom || 'U').charAt(0).toUpperCase();
+        }
+        
+        let contactsHtml = '';
+        if (user.telephone) contactsHtml += `<a href="https://wa.me/${user.telephone.replace(/\D/g,'')}" target="_blank" class="user-whatsapp"><i class="fab fa-whatsapp"></i> WhatsApp</a>`;
+        if (user.snapchat) contactsHtml += `<a href="https://snapchat.com/add/${user.snapchat}" target="_blank" class="user-snapchat"><i class="fab fa-snapchat"></i> Snapchat</a>`;
+        if (user.instagram) contactsHtml += `<a href="https://instagram.com/${user.instagram}" target="_blank" class="user-instagram"><i class="fab fa-instagram"></i> Instagram</a>`;
+        document.getElementById('userContacts').innerHTML = contactsHtml || '<p class="user-no-contact">Aucun contact renseigné</p>';
+    }
+    
+    function registerUser() {
+        const nom = document.getElementById('regNom').value.trim();
+        const prenom = document.getElementById('regPrenom').value.trim();
+        const filiere = document.getElementById('regFiliere').value.trim();
+        const tel = document.getElementById('regTel').value.trim().replace(/\s/g, '');
+        const snap = document.getElementById('regSnap').value.trim().replace('@', '');
+        const insta = document.getElementById('regInsta').value.trim().replace('@', '');
+        
+        if (!nom) return showToast('⚠️ Nom obligatoire', true);
+                if (!prenom) return showToast('⚠️ Prénom obligatoire', true);
+        if (!filiere) return showToast('⚠️ Ville / Région obligatoire', true);
+        
+        const userData = {
+            nom, prenom, filiere, telephone: tel, snapchat: snap, instagram: insta,
+            avatar: avatarImageData || '',
+            createdAt: firebase.database.ServerValue.TIMESTAMP
+        };
+        
+        if (editingUserId) {
+            usersRef.child(editingUserId).update(userData).then(() => {
+                showToast('✅ Profil modifié !');
+                editingUserId = null;
+                document.getElementById('btnRegisterText').textContent = "S'inscrire";
+                document.getElementById('btnCancelEdit').style.display = 'none';
+                document.getElementById('formTitle').textContent = 'Créer mon profil';
+                checkUserProfile();
+            }).catch(() => showToast('Erreur', true));
+        } else {
+            const newId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+            usersRef.child(newId).set(userData).then(() => {
+                currentUserId = newId;
+                localStorage.setItem('impact_user_id', newId);
+                showToast('✅ Inscription réussie !');
+                checkUserProfile();
+            }).catch(() => showToast('Erreur', true));
+        }
+    }
+    
+    function openEditProfile() {
+        if (!currentUserId) return;
+        usersRef.child(currentUserId).once('value').then(snap => {
+            const user = snap.val();
+            if (!user) return;
+            document.getElementById('regNom').value = user.nom || '';
+            document.getElementById('regPrenom').value = user.prenom || '';
+            document.getElementById('regFiliere').value = user.filiere || '';
+            document.getElementById('regTel').value = user.telephone || '';
+            document.getElementById('regSnap').value = user.snapchat || '';
+            document.getElementById('regInsta').value = user.instagram || '';
+            
+            const regAvatar = document.getElementById('registerAvatar');
+            if (user.avatar) {
+                regAvatar.innerHTML = `<img src="${user.avatar}" alt="Photo">`;
+                avatarImageData = user.avatar;
+            } else {
+                regAvatar.textContent = (user.prenom || user.nom || 'U').charAt(0).toUpperCase();
+                avatarImageData = null;
+            }
+            
+            editingUserId = currentUserId;
+            document.getElementById('btnRegisterText').textContent = 'Mettre à jour';
+            document.getElementById('btnCancelEdit').style.display = 'block';
+            document.getElementById('formTitle').textContent = 'Modifier mon profil';
+            showRegisterView();
+        });
+    }
+    
+    function cancelEdit() {
+        editingUserId = null;
+        avatarImageData = null;
+        document.getElementById('registerAvatar').innerHTML = '👤';
+        document.getElementById('btnRegisterText').textContent = "S'inscrire";
+        document.getElementById('btnCancelEdit').style.display = 'none';
+        document.getElementById('formTitle').textContent = 'Créer mon profil';
+        ['regNom','regPrenom','regFiliere','regTel','regSnap','regInsta'].forEach(id => document.getElementById(id).value = '');
+        checkUserProfile();
+    }
+    
+    function logoutProfile() {
+        if (!confirm('Voulez-vous vraiment vous déconnecter ?')) return;
+        currentUserId = null;
+        localStorage.removeItem('impact_user_id');
+        document.getElementById('profileView').style.display = 'none';
+        showRegisterView();
+        showToast('Déconnecté');
+    }
+    
+    // ==================== COMMUNAUTÉ ====================
+    function switchCommunityTab(tab) {
+        document.querySelectorAll('.community-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.community-panel').forEach(p => p.classList.remove('active'));
+        
+        if (tab === 'posts') {
+            document.getElementById('tabPosts').classList.add('active');
+            document.getElementById('panelPosts').classList.add('active');
+            loadPosts();
+            checkPostPermission();
+        } else {
+            document.getElementById('tabFriends').classList.add('active');
+            document.getElementById('panelFriends').classList.add('active');
+            loadCommunityUsers();
+        }
+    }
+    
+    function checkPostPermission() {
+        if (currentUserId) {
+            document.getElementById('notRegisteredMsg').style.display = 'none';
+            document.getElementById('postForm').classList.add('visible');
+        } else {
+            document.getElementById('notRegisteredMsg').style.display = 'block';
+            document.getElementById('postForm').classList.remove('visible');
+        }
+    }
+    
+    async function previewPostImage(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        showToast('📸 Compression de l\'image...');
+        
+        try {
+            const compressedFile = await imageCompression(file, { maxSizeMB: 0.5, maxWidthOrHeight: 1080, useWebWorker: true, initialQuality: 0.8 });
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                postImageData = ev.target.result;
+                const preview = document.getElementById('postImagePreview');
+                preview.src = postImageData;
+                preview.classList.add('visible');
+                showToast('✅ Image prête !');
+            };
+            reader.readAsDataURL(compressedFile);
+        } catch (error) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                postImageData = ev.target.result;
+                const preview = document.getElementById('postImagePreview');
+                preview.src = postImageData;
+                preview.classList.add('visible');
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+    
+    function publishPost() {
+        if (!currentUserId) return showToast('Inscrivez-vous d\'abord', true);
+        const text = document.getElementById('postText').value.trim();
+        if (!text && !postImageData) return showToast('Écrivez quelque chose', true);
+        
+        usersRef.child(currentUserId).once('value').then(snap => {
+            const user = snap.val();
+            if (!user) return showToast('Profil introuvable', true);
+            const fullName = `${user.prenom || ''} ${user.nom || ''}`.trim();
+            
+            const postData = {
+                userId: currentUserId,
+                authorName: fullName,
+                authorInitial: (user.prenom || user.nom || 'U').charAt(0).toUpperCase(),
+                authorAvatar: user.avatar || '',
+                text: text,
+                image: postImageData || '',
+                createdAt: firebase.database.ServerValue.TIMESTAMP
+            };
+            
+            postsRef.push(postData).then(() => {
+                showToast('✅ Publication partagée !');
+                document.getElementById('postText').value = '';
+                document.getElementById('postImagePreview').classList.remove('visible');
+                postImageData = null;
+                loadPosts();
+            }).catch(() => showToast('Erreur', true));
+        });
+    }
+    
+    function loadPosts() {
+        postsRef.orderByChild('createdAt').limitToLast(50).on('value', (snap) => {
+            const container = document.getElementById('postsList');
+            const posts = [];
+            snap.forEach(child => posts.unshift({ id: child.key, ...child.val() }));
+            
+            if (posts.length === 0) {
+                container.innerHTML = `<div class="empty-community"><div class="big-icon">📝</div><p style="font-weight:700;margin-bottom:5px;">Aucune publication</p><p style="font-size:0.8rem;">Soyez le premier à publier !</p></div>`;
+                return;
+            }
+            
+            container.innerHTML = posts.map(post => {
+                const isMine = post.userId === currentUserId;
+                const time = post.createdAt ? new Date(post.createdAt).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+                const avatarHtml = post.authorAvatar ? `<img src="${post.authorAvatar}" alt="Photo">` : (post.authorInitial || 'U');
+                
+                return `
+                    <div class="post-card">
+                        <div class="post-header">
+                            <div class="post-avatar">${avatarHtml}</div>
+                            <div class="post-info">
+                                <h4>${escapeHtml(post.authorName || 'Utilisateur')}</h4>
+                                <p>${time}</p>
+                            </div>
+                            ${isMine ? `<button class="post-delete" onclick="deletePost('${post.id}')"><i class="fas fa-trash"></i></button>` : ''}
+                        </div>
+                        ${post.text ? `<div class="post-text">${escapeHtml(post.text)}</div>` : ''}
+                        ${post.image ? `<img src="${post.image}" class="post-image">` : ''}
+                    </div>
+                `;
+            }).join('');
+        });
+    }
+    
+    function deletePost(id) {
+        if (!confirm('Supprimer cette publication ?')) return;
+        postsRef.child(id).remove().then(() => { showToast('Publication supprimée'); loadPosts(); });
+    }
+    
+    function loadCommunityUsers() {
+        usersRef.orderByChild('createdAt').on('value', (snap) => {
+            communityUsers = [];
+            snap.forEach(child => communityUsers.unshift({ id: child.key, ...child.val() }));
+            renderCommunity();
+        });
+    }
+    
+    function renderCommunity() {
+        const container = document.getElementById('communityList');
+        if (communityUsers.length === 0) {
+            container.innerHTML = `<div class="empty-community"><div class="big-icon">👥</div><p style="font-weight:700;margin-bottom:5px;">Aucun membre pour le moment</p><p style="font-size:0.8rem;">Soyez le premier à vous inscrire !</p></div>`;
+            return;
+        }
+        
+        container.innerHTML = communityUsers.map(user => {
+            const fullName = `${user.prenom || ''} ${user.nom || ''}`.trim();
+            const initial = (user.prenom || user.nom || 'U').charAt(0).toUpperCase();
+            const isMe = user.id === currentUserId;
+            const avatarHtml = user.avatar ? `<img src="${user.avatar}" alt="Photo">` : initial;
+            
+            let contactsHtml = '';
+            if (user.telephone) contactsHtml += `<a href="https://wa.me/${user.telephone.replace(/\D/g,'')}" target="_blank" class="user-whatsapp"><i class="fab fa-whatsapp"></i> WhatsApp</a>`;
+            if (user.snapchat) contactsHtml += `<a href="https://snapchat.com/add/${user.snapchat}" target="_blank" class="user-snapchat"><i class="fab fa-snapchat"></i> Snapchat</a>`;
+            if (user.instagram) contactsHtml += `<a href="https://instagram.com/${user.instagram}" target="_blank" class="user-instagram"><i class="fab fa-instagram"></i> Instagram</a>`;
+            
+            return `
+                <div class="user-card" data-name="${fullName.toLowerCase()}">
+                    <div class="user-header">
+                        <div class="user-avatar">${avatarHtml}</div>
+                        <div class="user-info">
+                            <h4>${escapeHtml(fullName)}${isMe ? ' <span style="font-size:0.65rem;color:#d4a017;">(moi)</span>' : ''}</h4>
+                            <p>📍 ${escapeHtml(user.filiere || 'Impact TV')}</p>
+                        </div>
+                    </div>
+                    ${contactsHtml ? `<div class="user-contacts">${contactsHtml}</div>` : '<p class="user-no-contact">Aucun contact renseigné</p>'}
+                </div>
+            `;
+        }).join('');
+    }
+    
+    function filterCommunity() {
+        const query = document.getElementById('searchCommunity').value.toLowerCase().trim();
+        document.querySelectorAll('.user-card').forEach(card => {
+            const name = card.getAttribute('data-name') || '';
+            card.style.display = name.includes(query) ? '' : 'none';
+        });
+    }
+    
+    // ==================== BOX ====================
+    async function loadBox(reset = false) {
+        if (boxLoading) return;
+        boxLoading = true;
+        
+        if (reset) {
+            boxVideos = []; boxPage = 1; boxHasMore = true;
+            document.getElementById('boxGrid').innerHTML = '';
+            document.getElementById('boxEnd').style.display = 'none';
+        }
+        
+        if (!boxHasMore) { boxLoading = false; return; }
+        
+        const loader = document.getElementById('boxLoader');
+        loader.style.display = 'block';
+        loader.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Chargement...';
+        
+        try {
+            let items = [];
+            if (boxPage === 1) {
+                const customForCat = boxCustomVideos.filter(v => v.category === boxCategory);
+                items = items.concat(customForCat.map(v => ({
+                    id: 'c_' + v.id, title: v.title, author: v.author || 'Impact TV',
+                    thumb: v.thumb || `https://i.ytimg.com/vi/${v.videoId}/hqdefault.jpg`,
+                    type: 'youtube', videoId: v.videoId, duration: v.duration || 0
+                })));
+            }
+            
+            const query = boxQuery || (BOX_CONFIG[boxCategory] ? BOX_CONFIG[boxCategory].q : '');
+            const ytItems = await searchYouTube(query, boxPage);
+            items = items.concat(ytItems);
+            
+            if (items.length === 0) {
+                boxHasMore = false;
+                loader.style.display = 'none';
+                document.getElementById('boxEnd').style.display = 'block';
+                boxLoading = false;
+                return;
+            }
+            
+            boxVideos = boxVideos.concat(items);
+            renderBox();
+            loader.style.display = 'none';
+            
+            if (ytItems.length < 15) {
+                boxHasMore = false;
+                document.getElementById('boxEnd').style.display = 'block';
+            }
+        } catch (e) {
+            console.error(e);
+            loader.innerHTML = '<p style="color:#e74c3c;">Erreur de chargement.</p>';
+        }
+        boxLoading = false;
+    }
+    
+    window.addEventListener('scroll', () => {
+        const boxView = document.getElementById('view-box');
+        if (!boxView.classList.contains('active')) return;
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const scrollHeight = document.documentElement.scrollHeight;
+        const clientHeight = document.documentElement.clientHeight;
+        if (scrollTop + clientHeight >= scrollHeight - 500) {
+            if (!boxLoading && boxHasMore) { boxPage++; loadBox(false); }
+        }
+    });
+    
+    async function searchYouTube(query, page = 1) {
+        for (const inst of PIPED_INSTANCES) {
+            try {
+                const searchQuery = page > 1 ? `${query} partie ${page}` : query;
+                const url = `${inst}/search?q=${encodeURIComponent(searchQuery)}&filter=videos`;
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 7000);
+                const res = await fetch(url, { signal: controller.signal });
+                clearTimeout(timeout);
+                if (!res.ok) continue;
+                const data = await res.json();
+                const items = (data?.items || []).filter(i => i.type === 'stream' && i.url);
+                if (items.length === 0) continue;
+                
+                return items.slice(0, 20).map(v => {
+                    const vid = (v.url || '').split('v=')[1]?.split('&')[0] || '';
+                    return {
+                        id: 'y_' + vid + '_' + page,
+                        title: v.title || 'Sans titre',
+                        author: v.uploaderName || '',
+                        thumb: `https://i.ytimg.com/vi/${vid}/hqdefault.jpg`,
+                        duration: v.duration || 0,
+                        type: 'youtube',
+                        videoId: vid
+                    };
+                }).filter(v => v.videoId);
+            } catch (e) { continue; }
+        }
+        return [];
+    }
+    
+    function renderBox() {
+        const grid = document.getElementById('boxGrid');
+        grid.innerHTML = boxVideos.map(v => {
+            let durationBadge = '';
+            if (v.duration && v.duration > 0) {
+                const h = Math.floor(v.duration / 3600);
+                const m = Math.floor((v.duration % 3600) / 60);
+                const s = v.duration % 60;
+                const dur = h > 0 
+                    ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+                    : `${m}:${String(s).padStart(2,'0')}`;
+                durationBadge = `<span class="box-duration">${dur}</span>`;
+            }
+            
+            return `
+                <div class="box-card">
+                    <div class="box-thumb" onclick="openBoxVideo('${v.id}')">
+                        <img src="${v.thumb}" loading="lazy" onerror="this.onerror=null; this.src='https://i.ytimg.com/vi/${v.videoId}/mqdefault.jpg';">
+                        <div class="box-play-icon"><i class="fas fa-play"></i></div>
+                        ${durationBadge}
+                    </div>
+                    <div class="box-info">
+                        <div class="box-title">${escapeHtml(v.title)}</div>
+                        ${v.author ? `<div class="box-author">${escapeHtml(v.author)}</div>` : ''}
+                        <button onclick="event.stopPropagation(); downloadBoxVideo('${v.id}')" 
+                                style="margin-top:8px;width:100%;background:rgba(46,204,113,0.15);color:#2ecc71;border:none;padding:7px;border-radius:8px;font-size:0.65rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;">
+                            <i class="fas fa-download"></i> Télécharger
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+    
+    function setBoxCategory(cat) {
+        hideOffline();
+        boxCategory = cat; boxQuery = ''; boxPage = 1; boxHasMore = true;
+        document.getElementById('boxSearch').value = '';
+        document.getElementById('boxEnd').style.display = 'none';
+        document.querySelectorAll('.box-cat').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
+        loadBox(true);
+    }
+    
+    function doBoxSearch() {
+        hideOffline();
+        const q = document.getElementById('boxSearch').value.trim();
+        if (!q) return loadBox(true);
+        boxQuery = q; boxPage = 1; boxHasMore = true;
+        document.getElementById('boxEnd').style.display = 'none';
+        document.querySelectorAll('.box-cat').forEach(b => b.classList.remove('active'));
+        loadBox(true);
+    }
+    
+    document.getElementById('boxSearch').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') doBoxSearch();
+    });
+    
+    function openBoxVideo(id) {
+        const v = boxVideos.find(x => x.id === id);
+        if (!v) return;
+        currentModalVideo = v;
+        document.getElementById('boxModalTitle').textContent = v.title;
+        document.getElementById('boxModalBody').innerHTML = `<iframe src="https://www.youtube.com/embed/${v.videoId}?autoplay=1&rel=0" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>`;
+        document.getElementById('boxModal').classList.add('open');
+    }
+    
+        function closeBoxModal() {
+        document.getElementById('boxModal').classList.remove('open');
+        document.getElementById('boxModalBody').innerHTML = '';
+        currentModalVideo = null;
+    }
+    
+    // ==================== BIBLE (Redirection directe vers Chretien.fr) ====================
+    function searchBible() {
+        const reference = document.getElementById('iaQuestion').value.trim();
+        
+        if (!reference) {
+            showToast('📝 Entrez une référence biblique (ex: Jean 3:16)', true);
+            return;
+        }
+        
+        const responseDiv = document.getElementById('iaResponse');
+        responseDiv.style.display = 'block';
+        responseDiv.innerHTML = `<div style="text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin text-2xl text-yellow-500 mb-2"></i><br><strong>Ouverture de la Bible Louis Segond...</strong><br><span style="font-size:0.75rem; color:#6b7280;">Vous allez être redirigé vers la version complète en ligne.</span></div>`;
+        
+        setTimeout(() => {
+            const encodedRef = encodeURIComponent(reference);
+            const url = `https://www.chretien.fr/bible?q=${encodedRef}`;
+            window.open(url, '_blank');
+            
+            setTimeout(() => {
+                responseDiv.style.display = 'none';
+                document.getElementById('iaQuestion').value = '';
+            }, 1500);
+            
+            showToast('📖 Ouverture de la Bible en ligne...');
+        }, 800);
+    }
+    
+    document.getElementById('askIaBtn').onclick = () => {
+        searchBible();
+    };
+    
+    document.getElementById('iaQuestion').onkeypress = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            searchBible();
+        }
+    };
+    
+    // ==================== INITIALISATION ====================
+    window.addEventListener('load', () => {
+        updateOnlineStatus();
+        checkUserProfile();
+    });
+    
+    window.switchView = switchView;
+    window.playVideo = playVideo;
+    window.shareVideo = shareVideo;
+    window.downloadVideo = downloadVideo;
+    window.downloadBoxVideo = downloadBoxVideo;
+    window.setBoxCategory = setBoxCategory;
+    window.doBoxSearch = doBoxSearch;
+    window.openBoxVideo = openBoxVideo;
+    window.closeBoxModal = closeBoxModal;
+    window.registerUser = registerUser;
+    window.openEditProfile = openEditProfile;
+    window.cancelEdit = cancelEdit;
+    window.logoutProfile = logoutProfile;
+    window.filterCommunity = filterCommunity;
+    window.switchCommunityTab = switchCommunityTab;
+    window.previewPostImage = previewPostImage;
+    window.publishPost = publishPost;
+    window.deletePost = deletePost;
+    window.handleAvatarUpload = handleAvatarUpload;
+    window.renderOfflineList = renderOfflineList;
+    window.playOffline = playOffline;
+    window.removeOffline = removeOffline;
+    window.showOffline = showOffline;
+    window.hideOffline = hideOffline;
+    window.searchBible = searchBible;
+</script>
+</body>
+</html>
