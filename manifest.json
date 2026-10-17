@@ -1,0 +1,19 @@
+{
+  "name": "Impact TV – La Télévision du Royaume des Cieux",
+  "short_name": "Impact TV",
+  "description": "Regardez Impact TV en direct et retrouvez les rediffusions.",
+  "start_url": "index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "icône.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
