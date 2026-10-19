@@ -268,14 +268,6 @@
             <button class="action-btn btn-share" id="shareBtn"><i class="fas fa-share-alt"></i><span>Partager</span></button>
             <button class="action-btn btn-download" id="downloadBtn"><i class="fas fa-download"></i><span>Télécharger</span></button>
         </div>
-        <div class="ia-box">
-            <h3><i class="fas fa-book-bible"></i> Bible Louis Segond</h3>
-            <div class="ia-input-group">
-                <input type="text" id="iaQuestion" placeholder="Ex: Jean 3:16, Genèse 1:1...">
-                <button id="askIaBtn"><i class="fas fa-search"></i> Ouvrir</button>
-            </div>
-            <div id="iaResponse" class="ia-response"></div>
-        </div>
         <h2 class="section-title">📺 Dernières émissions</h2>
         <div class="search-bar">
             <i class="fas fa-search"></i>
@@ -311,7 +303,7 @@
     <div class="container">
         <div class="box-banner">
             <h2><i class="fas fa-film"></i> Box Impact TV</h2>
-            <p>Prédications, films, dessins animés, archives</p>
+            <p>Prédications, films, dessins animés</p>
             <div class="box-search">
                 <i class="fas fa-search"></i>
                 <input type="text" id="boxSearch" placeholder="Rechercher une vidéo...">
@@ -1340,38 +1332,6 @@
         currentModalVideo = null;
     }
     
-    // ==================== BIBLE (Ouverture directe de la page Chretien.fr) ====================
-function searchBible() {
-    // Message de chargement
-    const responseDiv = document.getElementById('iaResponse');
-    responseDiv.style.display = 'block';
-    responseDiv.innerHTML = `<div style="text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin text-2xl text-yellow-500 mb-2"></i><br><strong>Ouverture de la Bible...</strong><br><span style="font-size:0.75rem; color:#6b7280;">Vous allez être redirigé vers la Bible en ligne.</span></div>`;
-    
-    setTimeout(() => {
-        // ✅ Lien direct vers la page de recherche de la Bible
-        window.open('https://www.chretien.fr/bible', '_blank');
-        
-        // Cache le message après ouverture
-        setTimeout(() => {
-            responseDiv.style.display = 'none';
-            document.getElementById('iaQuestion').value = '';
-        }, 1500);
-        
-        showToast('📖 Ouverture de la Bible en ligne...');
-    }, 800);
-}
-
-document.getElementById('askIaBtn').onclick = () => {
-    searchBible();
-};
-
-document.getElementById('iaQuestion').onkeypress = (e) => {
-    if (e.key === 'Enter') {
-        e.preventDefault();
-        searchBible();
-    }
-};
-    
     // ==================== INITIALISATION ====================
     window.addEventListener('load', () => {
         updateOnlineStatus();
@@ -1402,7 +1362,5 @@ document.getElementById('iaQuestion').onkeypress = (e) => {
     window.removeOffline = removeOffline;
     window.showOffline = showOffline;
     window.hideOffline = hideOffline;
-    window.searchBible = searchBible;
-</script>
 </body>
 </html>
