@@ -1340,43 +1340,37 @@
         currentModalVideo = null;
     }
     
-    // ==================== BIBLE (Redirection directe vers Chretien.fr) ====================
-    function searchBible() {
-        const reference = document.getElementById('iaQuestion').value.trim();
+    // ==================== BIBLE (Ouverture directe de la page Chretien.fr) ====================
+function searchBible() {
+    // Message de chargement
+    const responseDiv = document.getElementById('iaResponse');
+    responseDiv.style.display = 'block';
+    responseDiv.innerHTML = `<div style="text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin text-2xl text-yellow-500 mb-2"></i><br><strong>Ouverture de la Bible...</strong><br><span style="font-size:0.75rem; color:#6b7280;">Vous allez être redirigé vers la Bible en ligne.</span></div>`;
+    
+    setTimeout(() => {
+        // ✅ Lien direct vers la page de recherche de la Bible
+        window.open('https://www.chretien.fr/bible', '_blank');
         
-        if (!reference) {
-            showToast('📝 Entrez une référence biblique (ex: Jean 3:16)', true);
-            return;
-        }
-        
-        const responseDiv = document.getElementById('iaResponse');
-        responseDiv.style.display = 'block';
-        responseDiv.innerHTML = `<div style="text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin text-2xl text-yellow-500 mb-2"></i><br><strong>Ouverture de la Bible Louis Segond...</strong><br><span style="font-size:0.75rem; color:#6b7280;">Vous allez être redirigé vers la version complète en ligne.</span></div>`;
-        
+        // Cache le message après ouverture
         setTimeout(() => {
-            const encodedRef = encodeURIComponent(reference);
-            const url = `https://www.chretien.fr/bible?q=${encodedRef}`;
-            window.open(url, '_blank');
-            
-            setTimeout(() => {
-                responseDiv.style.display = 'none';
-                document.getElementById('iaQuestion').value = '';
-            }, 1500);
-            
-            showToast('📖 Ouverture de la Bible en ligne...');
-        }, 800);
-    }
-    
-    document.getElementById('askIaBtn').onclick = () => {
+            responseDiv.style.display = 'none';
+            document.getElementById('iaQuestion').value = '';
+        }, 1500);
+        
+        showToast('📖 Ouverture de la Bible en ligne...');
+    }, 800);
+}
+
+document.getElementById('askIaBtn').onclick = () => {
+    searchBible();
+};
+
+document.getElementById('iaQuestion').onkeypress = (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
         searchBible();
-    };
-    
-    document.getElementById('iaQuestion').onkeypress = (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            searchBible();
-        }
-    };
+    }
+};
     
     // ==================== INITIALISATION ====================
     window.addEventListener('load', () => {
